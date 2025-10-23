@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>卒業研究 進捗報告スライド</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <style>
         /* * 卒業研究 進捗報告スライド CSS
          * Design by Gemini
@@ -150,6 +154,93 @@
             margin-left: 8px;
         }
 
+        /* --- 操作パネルとボタンのスタイル --- */
+        .operation-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+        }
+
+        #download-pdf-btn {
+            background-color: #003366; /* メインカラー */
+            color: #FFFFFF;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: background-color 0.2s, transform 0.2s;
+            display: flex;
+            align-items: center;
+        }
+
+        #download-pdf-btn:hover {
+            background-color: #0056b3; /* ホバー色 */
+            transform: translateY(-2px);
+        }
+
+        /* --- ローディング画面のスタイル --- */
+        #loading-overlay {
+            display: none; /* 通常時は非表示 */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 9998;
+            color: white;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 1.2rem;
+        }
+
+        .loading-spinner {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #0056b3;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* --- 印刷時のスタイル --- */
+        @media print {
+            /* スライド以外のUIをすべて非表示に */
+            body {
+                background-color: #FFFFFF;
+                padding: 0;
+            }
+            .operation-panel {
+                display: none;
+            }
+            
+            /* スライドがページごとに分かれるように */
+            .slide {
+                width: 100%;
+                height: auto;
+                margin: 0;
+                box-shadow: none;
+                border-radius: 0;
+                page-break-after: always; /* 各スライドの後で改ページ */
+                overflow: hidden; /* 印刷用に調整 */
+            }
+            .slide:last-child {
+                page-break-after: auto;
+            }
+        }
     </style>
 </head>
 <body>
@@ -212,7 +303,7 @@
             <li><strong>使用モデル:</strong> <strong>VGG16</strong> および <strong>ResNet50</strong> の2種を候補とします。</li>
             <li><strong>学習手法:</strong> ImageNetでの事前学習済みモデルを用いた<strong>転移学習 (ファインチューニング)</strong> を行います。</li>
             <li><strong>検　証:</strong> <strong>k-分割交差検証 (k-Fold Cross-Validation)</strong> を採用し、モデルの汎化性能を頑健に評価します。</li>
-            <li><strong>評　価:</strong> 正解率が50% (ランダム) を有意に上回るか<strong>「片側・一標本t検定」</strong>で統計的に検定します。</li>
+            <li><strong>評{ :</strong> 正解率が50% (ランダム) を有意に上回るか<strong>「片側・一標本t検定」</strong>で統計的に検定します。</li>
         </ul>
     </div>
 
@@ -268,12 +359,86 @@
                 <ul>
                     <li><strong>[最優先] ロゴ画像収集の完了</strong></li>
                     <li><strong>[最優先] 中間発表資料の作成</strong></li>
-                    <li><strong>[着　手]</strong> データ前処理スクリプトの準備</li>
+                    <li><strong>[着{ ]</strong> データ前処理スクリプトの準備</li>
                     <li><strong>[余力]</strong> ベースラインモデルの動作確認</li>
                 </ul>
             </div>
         </div>
     </div>
+
+
+    <div class="operation-panel">
+        <button id="download-pdf-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="1.2em" height="1.2em" style="margin-right: 8px; vertical-align: middle;">
+                <path fill-rule="evenodd" d="M12 2.25a.75.75 0 01.75.75v11.69l3.22-3.22a.75.75 0 111.06 1.06l-4.5 4.5a.75.75 0 01-1.06 0l-4.5-4.5a.75.75 0 111.06-1.06l3.22 3.22V3a.75.75 0 01.75-.75zm-9 13.5a.75.75 0 01.75.75v3c0 .414.336.75.75.75h13.5a.75.75 0 00.75-.75v-3a.75.75 0 011.5 0v3A2.25 2.25 0 0118.75 21H5.25A2.25 2.25 0 013 18.75v-3a.75.75 0 01.75-.75z" clip-rule="evenodd" />
+            </svg>
+            PDFとしてダウンロード
+        </button>
+        <div id="loading-overlay">
+            <div class="loading-spinner"></div>
+            <p>PDFを生成中です... (1 / 8)</p>
+        </div>
+    </div>
+
+    <script>
+        // jsPDFのモジュールをグローバルスコープに展開
+        const { jsPDF } = window.jspdf;
+
+        document.getElementById('download-pdf-btn').addEventListener('click', async () => {
+            // ローディング画面を表示
+            const loadingOverlay = document.getElementById('loading-overlay');
+            const loadingText = loadingOverlay.querySelector('p');
+            loadingOverlay.style.display = 'flex';
+
+            // jsPDFインスタンスを作成 (16:9の横向き)
+            const pdf = new jsPDF({
+                orientation: 'landscape',
+                unit: 'px',
+                format: [1280, 720] // 16:9 (HD)
+            });
+
+            // すべてのスライド要素を取得
+            const slides = document.querySelectorAll('.slide');
+            const totalSlides = slides.length;
+
+            try {
+                for (let i = 0; i < totalSlides; i++) {
+                    const slide = slides[i];
+                    
+                    // ローディングテキストを更新
+                    loadingText.textContent = `PDFを生成中です... (${i + 1} / ${totalSlides})`;
+
+                    // html2canvasでスライドを画像(Canvas)に変換
+                    const canvas = await html2canvas(slide, {
+                        scale: 2, // 高解像度でキャプチャ
+                        useCORS: true, // 外部画像がある場合
+                        logging: false
+                    });
+
+                    // Canvasを画像データ(DataURL)に変換
+                    const imgData = canvas.toDataURL('image/png');
+
+                    // 1枚目以外は新しいページを追加
+                    if (i > 0) {
+                        pdf.addPage();
+                    }
+
+                    // PDFに画像を追加 (1280x720にフィットさせる)
+                    pdf.addImage(imgData, 'PNG', 0, 0, 1280, 720);
+                }
+
+                // PDFをダウンロード
+                pdf.save('progress_slides.pdf');
+
+            } catch (error) {
+                console.error('PDFの生成中にエラーが発生しました:', error);
+                alert('PDFの生成に失敗しました。コンソールを確認してください。');
+            } finally {
+                // ローディング画面を非表示
+                loadingOverlay.style.display = 'none';
+            }
+        });
+    </script>
 
 </body>
 </html>
