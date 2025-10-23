@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卒業研究 進捗報告スライド</title>
+    <style>
+        /* * 卒業研究 進捗報告スライド CSS
+         * Design by Gemini
+        */
+
+        /* --- 全体の設定 --- */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            background-color: #F0F2F5; /* 背景を薄いグレーに */
+            margin: 0;
+            padding: 20px 0;
+            color: #333;
+        }
+
+        /* --- スライドの基本コンテナ (16:9) --- */
+        .slide {
+            width: 90vw;
+            max-width: 1280px; /* PCでの最大幅 */
+            aspect-ratio: 16 / 9; /* アスペクト比を16:9に固定 */
+            margin: 25px auto;
+            background-color: #FFFFFF;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 40, 100, 0.08);
+            padding: 3vw 4.5vw;
+            box-sizing: border-box; /* paddingを含めてサイズ計算 */
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- スライドフッター (ページ番号) --- */
+        .slide::after {
+            content: attr(data-page);
+            position: absolute;
+            bottom: 2.5vw;
+            right: 4.5vw;
+            font-size: 1.1vw;
+            font-weight: 600;
+            color: #A0AEC0; /* 控えめなグレー */
+        }
+
+        /* --- タイトルスライド専用スタイル --- */
+        .title-slide {
+            text-align: center;
+            justify-content: center; /* 上下中央揃え */
+        }
+        
+        .title-slide h1 {
+            font-size: 3.2vw;
+            color: #1A202C;
+            font-weight: 800;
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        .title-slide h2 {
+            font-size: 1.7vw;
+            color: #2D3748;
+            font-weight: 500;
+            margin: 1.5vw 0 0 0;
+            line-height: 1.4;
+        }
+
+        .title-slide .info {
+            margin-top: 4vw;
+            font-size: 1.4vw;
+            font-weight: 600;
+            color: #4A5568;
+        }
+        .title-slide .info p {
+            margin: 0.5vw 0;
+        }
+
+        /* --- コンテンツスライド専用スタイル --- */
+        .content-slide h1 {
+            font-size: 2.5vw;
+            font-weight: 700;
+            color: #003366; /* アカデミックな濃紺 */
+            margin: 0 0 1.5vw 0;
+            padding-bottom: 0.8vw;
+            border-bottom: 3px solid #003366;
+        }
+
+        .content-slide h2 {
+            font-size: 1.8vw;
+            font-weight: 700;
+            color: #0056b3; /* やや明るい青 */
+            margin: 2vw 0 1vw 0;
+            padding-left: 1vw;
+            border-left: 5px solid #0056b3;
+        }
+
+        /* --- リストスタイル --- */
+        .content-slide ul {
+            list-style: none;
+            padding-left: 0.5vw;
+            font-size: 1.45vw;
+            line-height: 1.7;
+        }
+
+        .content-slide li {
+            position: relative;
+            padding-left: 2vw;
+            margin-bottom: 1vw;
+        }
+
+        .content-slide li::before {
+            content: "▶"; /* 強調するブレット */
+            position: absolute;
+            left: 0;
+            top: 0.1vw;
+            color: #0056b3;
+            font-size: 1.3vw;
+            font-weight: bold;
+        }
+
+        /* --- 2カラムレイアウト用 --- */
+        .columns {
+            display: flex;
+            width: 100%;
+            gap: 3vw;
+            margin-top: 1.5vw;
+        }
+        .column {
+            flex: 1;
+        }
+        .column h2 { margin-top: 0; }
+        .column ul { font-size: 1.35vw; } /* カラム内は少し文字を小さく */
+        .column li { margin-bottom: 1.2vw; }
+
+
+        /* --- 強調テキストスタイル --- */
+        strong {
+            color: #D90429; /* 強調したい赤 */
+            font-weight: 700;
+        }
+
+        /* 引用スタイル */
+        .cite {
+            font-size: 0.9vw;
+            color: #718096;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="slide title-slide" data-page="1">
+        <h1>卒業研究 進捗報告資料</h1>
+        <h2>ロゴデザインの視覚的特徴とブランド価値の関係性に関する研究：<br>深層学習を用いた分類モデルによる実証分析</h2>
+        <div class="info">
+            <p>報告者: 井口 陸</p>
+            <p>報告日: 2025年10月22日</p>
+        </div>
+    </div>
+    
+    <div class="slide content-slide" data-page="2">
+        <h1>1. 今週の主な進捗（サマリー）</h1>
+        <ul>
+            <li>研究の根幹となる<strong>データセットの基盤構築</strong>を完了し、<strong>実験計画を大幅に具体化</strong>しました。</li>
+            <li>Interbrand 2025 と Forbes Global 2000 の最新データを統合し、研究計画書で定義した<strong>「競合ペア選定プロトコル」を適用する準備が完了</strong>しました。</li>
+            <li>上記に伴い研究計画書を<strong>「Ver. 9.0」</strong>に更新し、論文区分、分析単位、詳細な検証手法、公式日程を反映したスケジュールを確定させました。</li>
+        </ul>
+    </div>
+
+    <div class="slide content-slide" data-page="3">
+        <h1>2. 決定事項（詳細）</h1>
+        
+        <h2>2.1. データセット基盤の構築</h2>
+        <ul>
+            <li><strong>① トップブランド群 (基準):</strong> Interbrand社「Best Global Brands 100 2025」</li>
+            <li><strong>② 競合群 (母集団):</strong> Forbes誌「Global 2000」リスト</li>
+            <li>「ブランド価値」(Interbrand)と「企業規模」(Forbes)という異なる指標に基づく客観的データセット構築が可能になりました。</li>
+        </ul>
+
+        <h2>2.2. 「競合ペア選定プロトコル」の確定</h2>
+        <ul>
+            <li>研究者の恣意性を排除するための客観的ルールを確定しました。</li>
+            <li>(1) 基準リスト (Forbes) → (2) 業界フィルター → (3) トップブランド除外 → (4) <strong>Forbes最高順位の企業を選出</strong></li>
+        </ul>
+    </div>
+
+    <div class="slide content-slide" data-page="4">
+        <h1>2. 決定事項（詳細）</h1>
+
+        <h2>2.3. 分析単位の明確化</h2>
+        <ul>
+            <li>分析の単位を「企業」ではなく<strong>「ブランド」</strong>と正式に定義しました。<span class="cite"></span></li>
+            <li>例: LVMH傘下の Louis Vuitton, Dior, Sephora などは、それぞれ<strong>独立したサンプル</strong>として扱います。</li>
+        </ul>
+
+        <h2>2.4. 論文区分の確定</h2>
+        <ul>
+            <li>本研究の成果物として提出する論文区分を、<strong>「b区分 (ソフトウエア論文)」</strong>として正式に決定しました。<span class="cite"></span></li>
+        </ul>
+    </div>
+
+    <div class="slide content-slide" data-page="5">
+        <h1>3. 変更・具体化事項（実験計画 Ver. 9.0）</h1>
+
+        <h2>5.3. 主要実験</h2>
+        <ul>
+            <li><strong>使用モデル:</strong> <strong>VGG16</strong> および <strong>ResNet50</strong> の2種を候補とします。</li>
+            <li><strong>学習手法:</strong> ImageNetでの事前学習済みモデルを用いた<strong>転移学習 (ファインチューニング)</strong> を行います。</li>
+            <li><strong>検　証:</strong> <strong>k-分割交差検証 (k-Fold Cross-Validation)</strong> を採用し、モデルの汎化性能を頑健に評価します。</li>
+            <li><strong>評　価:</strong> 正解率が50% (ランダム) を有意に上回るか<strong>「片側・一標本t検定」</strong>で統計的に検定します。</li>
+        </ul>
+    </div>
+
+    <div class="slide content-slide" data-page="6">
+        <h1>3. 変更・具体化事項（実験計画 Ver. 9.0）</h1>
+
+        <div class="columns">
+            <div class="column">
+                <h2>5.4. 分岐シナリオA (成功時)</h2>
+                <ul>
+                    <li><strong>XAI:</strong> <strong>Grad-CAM</strong>を用いてAIの判断根拠 (注視領域) を可視化します。</li>
+                    <li><strong>定量的裏付:</strong> XAIで得た示唆 (例: シンプルさ) を、<strong>3つの「シンプルさ」指標</strong> (①幾何学的 ②色彩的 ③情報論的) を実装し、<strong>t検定</strong>で群間差を検証します。</li>
+                </ul>
+            </div>
+            <div class="column">
+                <h2>5.5. 分岐シナリオB (失敗時)</h2>
+                <ul>
+                    <li><strong>感度分析:</strong> データセットを先鋭化 (例: Interbrand 1-30位 vs その競合) させ、性能が向上するか分析します。</li>
+                    <li><strong>統制分析:</strong> 最もペア数の多い単一業界で<strong>「業界特化モデル」</strong>を学習させ、汎用モデルとの性能差を比較します。</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide content-slide" data-page="7">
+        <h1>3. 変更・具体化事項（スケジュール）</h1>
+        
+        <h2>大学公式日程の反映</h2>
+        <ul>
+            <li>以下の公式日程を、絶対的なデッドラインとして研究計画に統合しました。<span class="cite"></span></li>
+        </ul>
+
+        <ul style="margin-top: 2vw;">
+            <li><strong>10月30日 (木): 卒研中間発表会</strong></li>
+            <li><strong>12月15日 (月): 卒論テーマ提出締切</strong></li>
+            <li><strong>01月15日 (木): 卒論締切</strong></li>
+        </ul>
+    </div>
+
+    <div class="slide content-slide" data-page="8">
+        <h1>4. 直近の課題と来週のTODO (〜10/29)</h1>
+
+        <div class="columns">
+            <div class="column">
+                <h2>直近の課題</h2>
+                <ul>
+                    <li><strong>ロゴ画像データの収集:</strong><br>全ブランド(特に非上場企業や親会社と別ロゴのブランド)の収集を確実に行う。</li>
+                    <li><strong>中間発表会の準備:</strong><br>「データセット構築」と「実験手法」の妥当性を明確に説明する資料を作成する。</li>
+                </ul>
+            </div>
+            <div class="column">
+                <h2>来週のTODO</h2>
+                <ul>
+                    <li><strong>[最優先] ロゴ画像収集の完了</strong></li>
+                    <li><strong>[最優先] 中間発表資料の作成</strong></li>
+                    <li><strong>[着　手]</strong> データ前処理スクリプトの準備</li>
+                    <li><strong>[余力]</strong> ベースラインモデルの動作確認</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
