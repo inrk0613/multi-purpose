@@ -11,7 +11,8 @@
   <title>無音区間オートカット（GitHub Pages / ffmpeg.wasm）</title>
 
   <!-- ffmpeg.wasm 0.11.2 -->
-  <script src="https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js"></script>
+  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+
 
   <!-- COOP/COEP を Service Worker で付与（GitHub Pages 対策） -->
   <script>
@@ -1036,7 +1037,7 @@
       const { createFFmpeg, fetchFile } = FFmpeg;
       ffmpeg = createFFmpeg({
         log: true,
-        corePath: 'https://unpkg.com/@ffmpeg/core-st@0.11.1/dist/ffmpeg-core.js',
+        corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
         mainName: 'main',
         progress: (p) => {
           if (!p || typeof p.ratio !== 'number') return;
