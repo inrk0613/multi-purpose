@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -10,8 +12,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>無音区間オートカット（GitHub Pages / ffmpeg.wasm）</title>
 
-  <!-- ffmpeg.wasm 0.11.2 -->
-  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.2/dist/ffmpeg.min.js"></script>
+  <!-- ffmpeg.wasm 最新版（0.12.10 に更新） -->
+  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
 
   <!-- COOP/COEP を Service Worker で付与（GitHub Pages 対策） -->
   <script>
@@ -847,7 +849,8 @@
         <p class="desc">
           ・ブラウザで ffmpeg-core.wasm（約 20〜30MB）を読み込んで処理するため、初回ロードに時間がかかることがあります。<br/>
           ・GitHub Pages 上で動かす場合、必要に応じて ffmpeg-core をリポジトリ内に配置し、
-          <code>corePath</code> をローカルパスに変更しておくと安定します。
+          <code>corePath</code> をローカルパスに変更しておくと安定します。<br/>
+          ・長い動画やセグメントが多い場合、メモリ使用量が増えるため、ブラウザのメモリ制限に注意してください。
         </p>
       </div>
     </section>
@@ -907,11 +910,11 @@
     let ffmpeg           = null;
     let ffmpegLoaded     = false;
 
-    let previewPlaying       = false;
-    let previewSegmentIndex  = 0;
+    let previewPlaying      = false;
+    let previewSegmentIndex = 0;
 
-    let windowRms    = null;
-    let windowFlags  = null;
+    let windowRms       = null;
+    let windowFlags     = null;
     let windowDuration = 0.05;
 
     const HIST_MIN_DB = -80;
@@ -934,12 +937,14 @@
     ];
     let activePresetId = 'custom';
 
+    // ログ関数
     function log(message) {
       const time = new Date().toISOString().split('T')[1].replace('Z', '');
       logArea.value += `[${time}] ${message}\n`;
       logArea.scrollTop = logArea.scrollHeight;
     }
 
+    // スライダーラベル更新
     function updateSliderLabels() {
       thresholdLabel.textContent = `${thresholdSlider.value} dB`;
       minVoiceLabel.textContent  = `${Number(minVoiceSlider.value).toFixed(1)} 秒`;
@@ -947,6 +952,7 @@
     }
     updateSliderLabels();
 
+    // 有効セグメント取得
     function getActiveSegments() {
       if (!detectedSegments || !detectedSegments.length) return [];
       if (!segmentEnabled || segmentEnabled.length !== detectedSegments.length) {
@@ -959,7 +965,7 @@
       return result;
     }
 
-    // プリセットUI
+    // プリセットUI構築
     function buildPresetButtons() {
       PRESETS.forEach(p => {
         const btn = document.createElement('button');
@@ -985,6 +991,7 @@
       updateActivePresetFromThreshold();
     }
 
+    // プリセットアクティブスタイル更新
     function updatePresetActiveStyles() {
       const buttons = presetButtonsContainer.querySelectorAll('.preset-btn');
       buttons.forEach(btn => {
@@ -996,6 +1003,7 @@
       });
     }
 
+    // 閾値からアクティブプリセット更新
     function updateActivePresetFromThreshold() {
       const t = Number(thresholdSlider.value);
       const preset = PRESETS.find(p => p.threshold === t);
@@ -1030,27 +1038,22 @@
       }
     });
 
-    // ffmpeg
+    // FFmpeg初期化（マルチスレッド版）
     function initFFmpegInstance() {
       if (ffmpeg) return ffmpeg;
-      const { createFFmpeg, fetchFile } = FFmpeg;
-      ffmpeg = createFFmpeg({
-        log: true,
-        corePath: 'https://unpkg.com/@ffmpeg/core-st@0.11.1/dist/ffmpeg-core.js',
-        mainName: 'main',
-        progress: (p) => {
-          if (!p || typeof p.ratio !== 'number') return;
-          const r = Math.max(0, Math.min(1, p.ratio));
+      const { FFmpeg } = FFmpegModule;  // 0.12.x の UMD 形式
+      ffmpeg = new FFmpeg();
+      ffmpeg.on("log", ({ message }) => {
+        log(`FFmpeg: ${message}`);
+      });
+      ffmpeg.on("progress", ({ progress }) => {
+        if (isExportRunning) {
+          const r = Math.max(0, Math.min(1, progress));
           exportProgress.style.transform = `scaleX(${r})`;
-          if (isExportRunning) {
-            exportProgressLabel.textContent = `${Math.round(r * 100)}%`;
-            if (r < 1) {
-              exportStatus.textContent = `書き出し中… ${Math.round(r * 100)}%`;
-            }
-          }
+          exportProgressLabel.textContent = `${Math.round(r * 100)}%`;
+          exportStatus.textContent = `書き出し中… ${Math.round(r * 100)}%`;
         }
       });
-      ffmpeg._fetchFile = fetchFile;
       return ffmpeg;
     }
 
@@ -1060,7 +1063,11 @@
         log('ffmpeg-core をロード中…');
         exportStatus.textContent = 'ffmpeg-core をロードしています…（初回のみ数十秒かかることがあります）';
         try {
-          await ffmpeg.load();
+          await ffmpeg.load({
+            coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
+            wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
+            workerURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-worker.js',
+          });
           ffmpegLoaded = true;
           log('ffmpeg-core のロード完了');
         } catch (err) {
@@ -1072,7 +1079,7 @@
       }
     }
 
-    // ファイル選択
+    // ファイル選択イベント
     fileInput.addEventListener('change', () => {
       const file = fileInput.files && fileInput.files[0];
       if (!file) return;
@@ -1114,7 +1121,7 @@
       log(`動画ファイル選択: ${file.name} (${sizeMB}MB)`);
     });
 
-    // 音声デコード
+    // 音声デコード（AudioContext優先、フォールバックでffmpeg）
     async function decodeAudioIfNeeded() {
       if (audioBuffer) return audioBuffer;
       if (!selectedFile) throw new Error('先に動画ファイルを選択してください。');
@@ -1151,23 +1158,22 @@
       log('ffmpeg で mono 48kHz PCM を生成開始');
 
       await ensureFFmpegLoaded();
-      const fetchFile = ffmpeg._fetchFile;
       const inputExt  = (selectedFile.name.split('.').pop() || 'mp4').toLowerCase();
       const inputName = `analysis-input.${inputExt}`;
       const pcmName   = 'analysis-audio.pcm';
 
       try {
-        ffmpeg.FS('writeFile', inputName, await fetchFile(selectedFile));
-        await ffmpeg.run(
+        await ffmpeg.writeFile(inputName, new Uint8Array(await selectedFile.arrayBuffer()));
+        await ffmpeg.exec([
           '-i', inputName,
           '-vn',
           '-ac', '1',
           '-ar', '48000',
           '-f', 'f32le',
           pcmName
-        );
-        const data = ffmpeg.FS('readFile', pcmName);
-        const dv   = new DataView(data.buffer, data.byteOffset, data.byteLength);
+        ]);
+        const data = await ffmpeg.readFile(pcmName);
+        const dv   = new DataView(data.buffer);
         const samples   = data.byteLength / 4;
         const floatData = new Float32Array(samples);
         for (let i = 0; i < samples; i++) {
@@ -1194,12 +1200,12 @@
         log(`ffmpeg フォールバックでも音声抽出に失敗: ${err.message || err}`);
         throw err;
       } finally {
-        try { ffmpeg.FS('unlink', pcmName); } catch (_) {}
-        try { ffmpeg.FS('unlink', inputName); } catch (_) {}
+        await ffmpeg.deleteFile(pcmName).catch(() => {});
+        await ffmpeg.deleteFile(inputName).catch(() => {});
       }
     }
 
-    // ヒストグラム & タイムライン
+    // ヒストグラムクリア
     function clearHistogram() {
       if (!histCtx) return;
       const w = histCanvas.width;
@@ -1212,6 +1218,7 @@
       histCtx.fillText('解析後に音量分布が表示されます', 8, h / 2);
     }
 
+    // タイムラインクリア
     function clearTimeline() {
       if (!timelineCtx) return;
       const w = timelineCanvas.width;
@@ -1224,6 +1231,7 @@
       timelineCtx.fillText('解析後に波形タイムラインが表示されます', 8, h / 2);
     }
 
+    // ヒストグラム描画
     function renderHistogram(thresholdDb) {
       if (!histCtx) return;
       const w = histCanvas.width;
@@ -1297,6 +1305,7 @@
       histCtx.fillText('0 dB', Math.min(w - 30, zeroX - 12), h - 6);
     }
 
+    // タイムライン描画
     function renderTimeline() {
       if (!timelineCtx) return;
       const w = timelineCanvas.width;
@@ -1370,7 +1379,7 @@
       }
     }
 
-    // 無音区間解析
+    // オーディオバッファからセグメント計算
     function computeSegmentsFromAudioBuffer(buffer, thresholdDb, minVoiceSec, paddingSec) {
       const duration   = buffer.duration;
       const sampleRate = buffer.sampleRate;
@@ -1384,14 +1393,16 @@
       const rmsArr    = new Array(totalWindows);
       const totalBins = new Array(HIST_BINS).fill(0);
 
+      // RMS計算を最適化（ループ内計算削減）
       for (let i = 0; i < totalWindows; i++) {
         let sumSq = 0;
         const offset = i * winSize;
-        for (let j = 0; j < winSize; j++) {
-          const s = channelData[offset + j];
+        const end = Math.min(offset + winSize, channelData.length);
+        for (let j = offset; j < end; j++) {
+          const s = channelData[j];
           sumSq += s * s;
         }
-        const rms = Math.sqrt(sumSq / winSize);
+        const rms = Math.sqrt(sumSq / (end - offset));
         rmsArr[i] = rms;
 
         let db = rms <= 1e-8 ? -Infinity : 20 * Math.log10(rms);
@@ -1464,6 +1475,7 @@
       return merged;
     }
 
+    // 時間フォーマット
     function formatTime(sec) {
       const s = Math.max(0, sec);
       const m = Math.floor(s / 60);
@@ -1472,6 +1484,7 @@
       return `${m}分${r.toFixed(1)}秒`;
     }
 
+    // 統計とセグメントUI更新
     function refreshStatsAndSegmentsUI() {
       statsArea.innerHTML = '';
       segmentsContainer.innerHTML = '';
@@ -1574,6 +1587,7 @@
       segmentsContainer.appendChild(frag);
     }
 
+    // フル解析実行
     async function runFullAnalysis() {
       if (!selectedFile) {
         alert('先に動画ファイルを選択してください。');
@@ -1621,6 +1635,7 @@
       }
     }
 
+    // セグメンテーションのみ再実行
     function runSegmentationOnly() {
       if (!audioBuffer) return;
       const threshold = Number(thresholdSlider.value);
@@ -1654,7 +1669,7 @@
       runFullAnalysis();
     });
 
-    // プレビュー
+    // プレビュー開始
     function startPreview() {
       const segs = (previewSegments && previewSegments.length) ? previewSegments : getActiveSegments();
       if (!segs.length || !previewVideo.src) {
@@ -1672,6 +1687,7 @@
       previewVideo.play().catch(() => {});
     }
 
+    // プレビュー停止
     function stopPreview() {
       if (!previewPlaying) {
         previewCutButton.innerHTML = '<span class="btn-icon">▶️</span> カット後のプレビュー再生';
@@ -1725,7 +1741,7 @@
       }
     });
 
-    // タイムラインクリック
+    // タイムラインクリックイベント
     timelineCanvas.addEventListener('click', (e) => {
       if (!audioBuffer || !windowRms) return;
       const rect = timelineCanvas.getBoundingClientRect();
@@ -1763,31 +1779,7 @@
       renderTimeline();
     });
 
-    // filter_complex
-    function buildFilterComplex(segments) {
-      if (!segments.length) {
-        throw new Error('書き出し対象の区間がありません。');
-      }
-
-      const vParts       = [];
-      const aParts       = [];
-      const concatInputs = [];
-
-      segments.forEach((seg, idx) => {
-        const start = seg.start.toFixed(3);
-        const end   = seg.end.toFixed(3);
-        vParts.push(`[0:v]trim=start=${start}:end=${end},setpts=PTS-STARTPTS[v${idx}]`);
-        aParts.push(`[0:a]atrim=start=${start}:end=${end},asetpts=PTS-STARTPTS[a${idx}]`);
-        concatInputs.push(`[v${idx}][a${idx}]`);
-      });
-
-      const concat = `${concatInputs.join('')}concat=n=${segments.length}:v=1:a=1[v][a]`;
-      const filter = `${vParts.join(';')};${aParts.join(';')};${concat}`;
-      log(`filter_complex: ${filter}`);
-      return filter;
-    }
-
-    // 書き出し
+    // 書き出し処理（個別クリップ作成 + concat）
     async function exportVideo() {
       if (!selectedFile) {
         alert('先に動画ファイルを選択してください。');
@@ -1798,6 +1790,11 @@
         : getActiveSegments();
       if (!segmentsForExport.length) {
         alert('有効な区間がありません。しきい値や区間のON/OFFを確認してください。');
+        return;
+      }
+
+      if (segmentsForExport.length > 500) {
+        alert('セグメント数が多すぎます。しきい値を調整してセグメント数を減らしてください。');
         return;
       }
 
@@ -1821,29 +1818,54 @@
         const outputName= 'output.mp4';
 
         log('ffmpeg FS に入力ファイルを書き込み');
-        const fetchFile = ffmpeg._fetchFile;
-        ffmpeg.FS('writeFile', inputName, await fetchFile(selectedFile));
+        await ffmpeg.writeFile(inputName, new Uint8Array(await selectedFile.arrayBuffer()));
 
-        const filterComplex = buildFilterComplex(segmentsForExport);
+        const clipFiles = [];
+        const concatList = [];
 
-        exportStatus.textContent = '再エンコード処理中… 0%';
-        log(`ffmpeg.run -i ${inputName} ...`);
+        exportStatus.textContent = '個別クリップ作成中…';
+        log(`セグメント数: ${segmentsForExport.length}`);
 
-        await ffmpeg.run(
-          '-i', inputName,
-          '-filter_complex', filterComplex,
-          '-map', '[v]', '-map', '[a]',
-          '-preset', 'veryfast',
-          '-crf', '23',
-          '-movflags', '+faststart',
+        for (let i = 0; i < segmentsForExport.length; i++) {
+          const seg = segmentsForExport[i];
+          const clipName = `clip_${i}.mp4`;
+          const start = seg.start.toFixed(3);
+          const duration = (seg.end - seg.start).toFixed(3);
+
+          await ffmpeg.exec([
+            '-i', inputName,
+            '-ss', start,
+            '-t', duration,
+            '-preset', 'veryfast',
+            '-crf', '23',
+            '-movflags', '+faststart',
+            clipName
+          ]);
+
+          clipFiles.push(clipName);
+          concatList.push(`file ${clipName}`);
+          const progress = (i + 1) / segmentsForExport.length * 0.5;  // クリップ作成は全体の50%
+          exportProgress.style.transform = `scaleX(${progress})`;
+          exportProgressLabel.textContent = `${Math.round(progress * 100)}%`;
+        }
+
+        const concatFile = 'concat.txt';
+        await ffmpeg.writeFile(concatFile, new TextEncoder().encode(concatList.join('\n')));
+
+        exportStatus.textContent = 'クリップ結合中…';
+        await ffmpeg.exec([
+          '-f', 'concat',
+          '-safe', '0',
+          '-i', concatFile,
+          '-c', 'copy',
           outputName
-        );
+        ]);
 
         exportProgress.style.transform = 'scaleX(1)';
         exportProgressLabel.textContent = '100%';
 
         log('ffmpeg 出力読み込み');
-        const data = ffmpeg.FS('readFile', outputName);
+        const data = await ffmpeg.readFile(outputName);
         const blob = new Blob([data.buffer], { type: 'video/mp4' });
         const url  = URL.createObjectURL(blob);
 
@@ -1864,10 +1886,15 @@
         exportStatus.classList.add('err');
         log(`書き出しエラー: ${err.message || err}`);
       } finally {
-        try { ffmpeg.FS('unlink', 'output.mp4'); } catch (_) {}
+        // メモリ解放
         try {
+          await ffmpeg.deleteFile(outputName);
           const inputExt = (selectedFile.name.split('.').pop() || 'mp4').toLowerCase();
-          ffmpeg.FS('unlink', `input.${inputExt}`);
+          await ffmpeg.deleteFile(`input.${inputExt}`);
+          for (const clip of clipFiles || []) {
+            await ffmpeg.deleteFile(clip);
+          }
+          await ffmpeg.deleteFile('concat.txt');
         } catch (_) {}
         isExportRunning       = false;
         exportButton.disabled = false;
@@ -1878,7 +1905,7 @@
       exportVideo();
     });
 
-    // 初期表示
+    // 初期化
     buildPresetButtons();
     clearHistogram();
     clearTimeline();
