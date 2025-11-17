@@ -1031,45 +1031,46 @@
       }
     });
 
-    // FFmpeg初期化（マルチスレッド版）
-    function initFFmpegInstance() {
-      if (ffmpeg) return ffmpeg;
-      const { FFmpeg: FFmpegClass } = window.FFmpeg;  // FFmpegClass という別名で受け取る
-      ffmpeg = new FFmpeg();
-      ffmpeg.on("log", ({ message }) => {
-        log(`FFmpeg: ${message}`);
-      });
-     // <script> タグ内の ffmpeg.on("progress", ...) を以下で置き換えます
+    // FFmpeg初期化（シングルスレッド版）
+    function initFFmpegInstance() {
+      if (ffmpeg) return ffmpeg;
+      
+      // ★ 修正点 1: グローバルから "FFmpegClass" という別名でクラスを取得
+      const { FFmpeg: FFmpegClass } = window.FFmpeg;
+      
+      // ★ 修正点 2: FFmpegClass を使ってインスタンス化
+      ffmpeg = new FFmpegClass();
+      
+      // ログイベントハンドラ
+      ffmpeg.on("log", ({ message }) => {
+        log(`FFmpeg: ${message}`);
+      });
 
-    ffmpeg = new FFmpegClass();
-      if (!isExportRunning) return;
+      // プログレスイベントハンドラ（リアルタイム更新用）
+      ffmpeg.on("progress", ({ progress }) => {
+        if (!isExportRunning) return;
 
-      let overallProgress = 0;
-      // クリップ作成（エンコード）が重いため 90%
-      const clipCreationWeight = 0.9;
-      // 結合（コピー）は軽いため 10%
-      const concatWeight = 0.1;
+        let overallProgress = 0;
+        const clipCreationWeight = 0.9;
+        const concatWeight = 0.1;
 
-      if (isConcatenating) {
-        // ステップ2: 結合中
-        overallProgress = clipCreationWeight + (progress * concatWeight);
-      } else if (totalClips > 0) {
-        // ステップ1: クリップ作成中
-        // (現在のクリップの進捗 + 完了したクリップ数) / 全クリップ数
-        const clipProgress = (currentClipIndex + progress) / totalClips;
-        overallProgress = clipProgress * clipCreationWeight;
-      }
+        if (isConcatenating) {
+          // ステップ2: 結合中
+          overallProgress = clipCreationWeight + (progress * concatWeight);
+        } else if (totalClips > 0) {
+          // ステップ1: クリップ作成中
+          const clipProgress = (currentClipIndex + progress) / totalClips;
+          overallProgress = clipProgress * clipCreationWeight;
+        }
 
-      const r = Math.max(0, Math.min(1, overallProgress));
-      exportProgress.style.transform = `scaleX(${r})`;
-      const percent = Math.round(r * 100);
-      exportProgressLabel.textContent = `${percent}%`;
-      
-      // ステータステキストは exportVideo 関数側で更新するので、ここでは更新しない
-      // exportStatus.textContent = `書き出し中… ${percent}%`;
-    });
-      return ffmpeg;
-    }
+        const r = Math.max(0, Math.min(1, overallProgress));
+        exportProgress.style.transform = `scaleX(${r})`;
+        const percent = Math.round(r * 100);
+        exportProgressLabel.textContent = `${percent}%`;
+      });
+
+      return ffmpeg;
+    }
 
     // <script> タグ内の ensureFFmpegLoaded 関数を以下で置き換えます
 
