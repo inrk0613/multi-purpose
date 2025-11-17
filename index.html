@@ -1034,14 +1034,14 @@
     // FFmpeg初期化（マルチスレッド版）
     function initFFmpegInstance() {
       if (ffmpeg) return ffmpeg;
-      const { FFmpeg } = window.FFmpeg;  // 0.12.x の UMD 形式
+      const { FFmpeg: FFmpegClass } = window.FFmpeg;  // FFmpegClass という別名で受け取る
       ffmpeg = new FFmpeg();
       ffmpeg.on("log", ({ message }) => {
         log(`FFmpeg: ${message}`);
       });
      // <script> タグ内の ffmpeg.on("progress", ...) を以下で置き換えます
 
-    ffmpeg.on("progress", ({ progress }) => { // v0.12系は progress (0-1) を返す
+    ffmpeg = new FFmpegClass();
       if (!isExportRunning) return;
 
       let overallProgress = 0;
