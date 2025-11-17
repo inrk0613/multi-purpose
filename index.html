@@ -15,21 +15,7 @@
   <!-- ffmpeg.wasm 最新版（0.12.10 に更新） -->
   <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
 
-  <!-- COOP/COEP を Service Worker で付与（GitHub Pages 対策） -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./coi-serviceworker.js').then(
-          () => {
-            console.log('coi-serviceworker registered');
-          },
-          (err) => {
-            console.warn('coi-serviceworker registration failed:', err);
-          }
-        );
-      });
-    }
-  </script>
+
 
   <style>
     :root {
@@ -908,9 +894,17 @@
     let audioBuffer      = null;
     let detectedSegments = [];
     let ffmpeg           = null;
+    // ... (省略) ...
     let ffmpegLoaded     = false;
 
+    // ↓↓↓ プログレスバー管理用の変数を追加 ↓↓↓
+    let currentClipIndex = 0;
+    let totalClips = 0;
+    let isConcatenating = false;
+    // ↑↑↑ ここまで追加 ↑↑↑
+
     let previewPlaying      = false;
+    // ... (省略) ...
     let previewSegmentIndex = 0;
 
     let windowRms       = null;
@@ -1046,34 +1040,59 @@
       ffmpeg.on("log", ({ message }) => {
         log(`FFmpeg: ${message}`);
       });
-      ffmpeg.on("progress", ({ progress }) => {
-        if (isExportRunning) {
-          const r = Math.max(0, Math.min(1, progress));
-          exportProgress.style.transform = `scaleX(${r})`;
-          exportProgressLabel.textContent = `${Math.round(r * 100)}%`;
-          exportStatus.textContent = `書き出し中… ${Math.round(r * 100)}%`;
-        }
+     // <script> タグ内の ffmpeg.on("progress", ...) を以下で置き換えます
+
+    ffmpeg.on("progress", ({ progress }) => { // v0.12系は progress (0-1) を返す
+      if (!isExportRunning) return;
+
+      let overallProgress = 0;
+      // クリップ作成（エンコード）が重いため 90%
+      const clipCreationWeight = 0.9;
+      // 結合（コピー）は軽いため 10%
+      const concatWeight = 0.1;
+
+      if (isConcatenating) {
+        // ステップ2: 結合中
+        overallProgress = clipCreationWeight + (progress * concatWeight);
+      } else if (totalClips > 0) {
+        // ステップ1: クリップ作成中
+        // (現在のクリップの進捗 + 完了したクリップ数) / 全クリップ数
+        const clipProgress = (currentClipIndex + progress) / totalClips;
+        overallProgress = clipProgress * clipCreationWeight;
+      }
+
+      const r = Math.max(0, Math.min(1, overallProgress));
+      exportProgress.style.transform = `scaleX(${r})`;
+      const percent = Math.round(r * 100);
+      exportProgressLabel.textContent = `${percent}%`;
+      
+      // ステータステキストは exportVideo 関数側で更新するので、ここでは更新しない
+      // exportStatus.textContent = `書き出し中… ${percent}%`;
+    });
       });
       return ffmpeg;
     }
 
+    // <script> タグ内の ensureFFmpegLoaded 関数を以下で置き換えます
+
     async function ensureFFmpegLoaded() {
       initFFmpegInstance();
       if (!ffmpegLoaded) {
-        log('ffmpeg-core をロード中…');
-        exportStatus.textContent = 'ffmpeg-core をロードしています…（初回のみ数十秒かかることがあります）';
+        log('ffmpeg-core (シングルスレッド版) をロード中…');
+        exportStatus.textContent = 'ffmpeg-core (ST版) をロードしています…（初回のみ時間がかかることがあります）';
         try {
+          // シングルスレッド版 (core-st) に変更
           await ffmpeg.load({
-            coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
-            wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
-            workerURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-worker.js',
+            coreURL: 'https://unpkg.com/@ffmpeg/core-st@0.12.6/dist/umd/ffmpeg-core.js',
+            wasmURL: 'https://unpkg.com/@ffmpeg/core-st@0.12.6/dist/umd/ffmpeg-core.wasm',
+            // workerURL は ST版では不要なので削除
           });
           ffmpegLoaded = true;
-          log('ffmpeg-core のロード完了');
+          log('ffmpeg-core (シングルスレッド版) のロード完了');
         } catch (err) {
           console.error(err);
-          log('ffmpeg-core のロードに失敗しました。');
-          exportStatus.textContent = 'ffmpeg-core のロードに失敗しました。ネットワーク環境をご確認ください。';
+          log('ffmpeg-core (ST版) のロードに失敗しました。');
+          exportStatus.textContent = 'ffmpeg-core (ST版) のロードに失敗しました。ネットワークをご確認ください。';
           throw err;
         }
       }
@@ -1779,7 +1798,8 @@
       renderTimeline();
     });
 
-    // 書き出し処理（個別クリップ作成 + concat）
+  // <script> タグ内の exportVideo 関数を以下で置き換えます
+
     async function exportVideo() {
       if (!selectedFile) {
         alert('先に動画ファイルを選択してください。');
@@ -1792,7 +1812,6 @@
         alert('有効な区間がありません。しきい値や区間のON/OFFを確認してください。');
         return;
       }
-
       if (segmentsForExport.length > 500) {
         alert('セグメント数が多すぎます。しきい値を調整してセグメント数を減らしてください。');
         return;
@@ -1800,14 +1819,20 @@
 
       stopPreview();
 
+      // --- 状態リセット ---
       exportButton.disabled = true;
-      isExportRunning       = true;
+      isExportRunning = true;
+      currentClipIndex = 0;
+      totalClips = segmentsForExport.length;
+      isConcatenating = false;
+      // --------------------
+
       exportProgress.style.transform = 'scaleX(0)';
       exportProgressLabel.textContent = '0%';
       exportStatus.textContent = '書き出し準備中…';
       exportStatus.classList.remove('warn', 'err');
       downloadLink.style.display = 'none';
-      outputVideo.style.display  = 'none';
+      outputVideo.style.display = 'none';
       outputVideo.removeAttribute('src');
 
       try {
@@ -1818,15 +1843,19 @@
         const outputName= 'output.mp4';
 
         log('ffmpeg FS に入力ファイルを書き込み');
+        exportStatus.textContent = '入力ファイルをffmpegメモリに準備中…';
         await ffmpeg.writeFile(inputName, new Uint8Array(await selectedFile.arrayBuffer()));
 
         const clipFiles = [];
         const concatList = [];
 
-        exportStatus.textContent = '個別クリップ作成中…';
-        log(`セグメント数: ${segmentsForExport.length}`);
+        exportStatus.textContent = `個別クリップ作成中 (0 / ${totalClips})…`;
+        log(`セグメント数: ${totalClips}`);
 
-        for (let i = 0; i < segmentsForExport.length; i++) {
+        for (let i = 0; i < totalClips; i++) {
+          currentClipIndex = i; // ★ 現在のクリップインデックスを更新
+          exportStatus.textContent = `個別クリップ作成中 (${i + 1} / ${totalClips})…`;
+
           const seg = segmentsForExport[i];
           const clipName = `clip_${i}.mp4`;
           const start = seg.start.toFixed(3);
@@ -1836,28 +1865,31 @@
             '-i', inputName,
             '-ss', start,
             '-t', duration,
-            '-preset', 'veryfast',
+            '-preset', 'veryfast', // 高速化
             '-crf', '23',
             '-movflags', '+faststart',
+            '-y', // 既存ファイル上書き
             clipName
           ]);
 
           clipFiles.push(clipName);
           concatList.push(`file ${clipName}`);
-          const progress = (i + 1) / segmentsForExport.length * 0.5;  // クリップ作成は全体の50%
-          exportProgress.style.transform = `scaleX(${progress})`;
-          exportProgressLabel.textContent = `${Math.round(progress * 100)}%`;
+
+          // ★ ループ内の手動プログレスバー更新は削除 (progressイベントに任せる)
         }
 
         const concatFile = 'concat.txt';
         await ffmpeg.writeFile(concatFile, new TextEncoder().encode(concatList.join('\n')));
 
         exportStatus.textContent = 'クリップ結合中…';
+        isConcatenating = true; // ★ 状態を「結合中」にセット
+
         await ffmpeg.exec([
           '-f', 'concat',
           '-safe', '0',
           '-i', concatFile,
-          '-c', 'copy',
+          '-c', 'copy', // 高速なコピー
+          '-y', // 既存ファイル上書き
           outputName
         ]);
 
@@ -1880,13 +1912,14 @@
         exportStatus.textContent =
           `書き出し完了：${formatTime(original)} → ${formatTime(totalKept)} に短縮されました。`;
         log('書き出し完了');
+
       } catch (err) {
         console.error(err);
         exportStatus.textContent = `書き出しエラー: ${err.message || err}`;
         exportStatus.classList.add('err');
         log(`書き出しエラー: ${err.message || err}`);
       } finally {
-        // メモリ解放
+        // --- メモリ解放＆状態リセット ---
         try {
           await ffmpeg.deleteFile(outputName);
           const inputExt = (selectedFile.name.split('.').pop() || 'mp4').toLowerCase();
@@ -1896,8 +1929,13 @@
           }
           await ffmpeg.deleteFile('concat.txt');
         } catch (_) {}
-        isExportRunning       = false;
+
+        isExportRunning = false;
+        isConcatenating = false;
+        currentClipIndex = 0;
+        totalClips = 0;
         exportButton.disabled = false;
+        // --------------------
       }
     }
 
