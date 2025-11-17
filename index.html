@@ -12,8 +12,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>無音区間オートカット（GitHub Pages / ffmpeg.wasm）</title>
 
-  <!-- ffmpeg.wasm 最新版（0.12.10 に更新） -->
-  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+<script src="https://unpkg.com/@ffmpeg/ffmpeg-st@0.12.10/dist/umd/ffmpeg.min.js"></script>
 
 
 
@@ -1082,10 +1081,10 @@
         exportStatus.textContent = 'ffmpeg-core (ST版) をロードしています…（初回のみ時間がかかることがあります）';
         try {
           // シングルスレッド版 (core-st) に変更
-          await ffmpeg.load({
+         await ffmpeg.load({
             coreURL: 'https://unpkg.com/@ffmpeg/core-st@0.12.6/dist/umd/ffmpeg-core.js',
             wasmURL: 'https://unpkg.com/@ffmpeg/core-st@0.12.6/dist/umd/ffmpeg-core.wasm',
-            // workerURL は ST版では不要なので削除
+            // workerURL は ST版では不要
           });
           ffmpegLoaded = true;
           log('ffmpeg-core (シングルスレッド版) のロード完了');
