@@ -12,7 +12,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>無音区間オートカット（GitHub Pages / ffmpeg.wasm）</title>
 
-<script src="https://unpkg.com/@ffmpeg/ffmpeg-st@0.12.10/dist/umd/ffmpeg.min.js"></script>
+<script src="https://unpkg.com/@ffmpeg/ffmpeg-st@0.12.10/dist/umd/ffmpeg.js"></script>
 
 
 
@@ -1068,7 +1068,6 @@
       // ステータステキストは exportVideo 関数側で更新するので、ここでは更新しない
       // exportStatus.textContent = `書き出し中… ${percent}%`;
     });
-      });
       return ffmpeg;
     }
 
