@@ -1034,7 +1034,7 @@
     function initFFmpegInstance() {
       if (ffmpeg) return ffmpeg;
       
-   const { FFmpeg: FFmpegClass } = window.FFmpeg;
+   const { FFmpeg: FFmpegClass } = FFmpeg;
       
       // ★ 修正点 2: FFmpegClass を使ってインスタンス化
       ffmpeg = new FFmpegClass();
