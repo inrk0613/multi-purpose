@@ -11,7 +11,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>無音区間オートカット（GitHub Pages / ffmpeg.wasm）</title>
-
+<script src="https://unpkg.com/@ffmpeg/ffmpeg-st@0.12.10/dist/umd/ffmpeg.js"></script>
 
 
 
@@ -1034,8 +1034,7 @@
     function initFFmpegInstance() {
       if (ffmpeg) return ffmpeg;
       
-    // ★ 修正点 1: 正しいグローバルオブジェクト "FFmpegWASM" から取得
-      const { FFmpeg: FFmpegClass } = window.FFmpegWASM;
+   const { FFmpeg: FFmpegClass } = window.FFmpeg;
       
       // ★ 修正点 2: FFmpegClass を使ってインスタンス化
       ffmpeg = new FFmpegClass();
