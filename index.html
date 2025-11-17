@@ -1034,7 +1034,7 @@
     // FFmpeg初期化（マルチスレッド版）
     function initFFmpegInstance() {
       if (ffmpeg) return ffmpeg;
-      const { FFmpeg } = FFmpegModule;  // 0.12.x の UMD 形式
+      const { FFmpeg } = FFmpeg;  // 0.12.x の UMD 形式
       ffmpeg = new FFmpeg();
       ffmpeg.on("log", ({ message }) => {
         log(`FFmpeg: ${message}`);
