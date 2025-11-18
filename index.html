@@ -379,33 +379,91 @@ fileInput.addEventListener('change', async (e) => {
   log(`File selected: ${file.name} (${(file.size/1024/1024).toFixed(1)} MB)`);
 });
 
-// --- 3. Analysis (Web Audio API) ---
+// --- 3. Analysis (Web Audio API & FFmpeg Fallback) ---
 analyzeBtn.addEventListener('click', async () => {
   if (!rawFile) return;
   
   analyzeBtn.disabled = true;
-  analyzeStatus.innerText = "音声をデコード中...";
   analyzeStatus.className = "status-msg";
+  analyzeStatus.innerText = "音声をデコード中...";
 
   try {
-    // AudioContextを使って高速に波形データを取得
-    const arrayBuffer = await rawFile.arrayBuffer();
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
     
-    log(`Audio decoded. Duration: ${audioBuffer.duration.toFixed(2)}s, Channels: ${audioBuffer.numberOfChannels}`);
+    // 【試行1】ブラウザ標準機能でデコードを試みる
+    try {
+      log("Attempting native decode...");
+      const arrayBuffer = await rawFile.arrayBuffer();
+      // コピーを作成して渡す（decodeAudioDataはバッファを消費する場合があるため）
+      audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
+      log("Native decode successful.");
+    } catch (nativeError) {
+      log(`Native decode failed: ${nativeError.message}. Switching to FFmpeg fallback.`);
+      analyzeStatus.innerText = "標準デコード失敗。FFmpegで変換して解析します...";
+      
+      // 【試行2】失敗した場合、FFmpegを使ってWAVに変換してから読み込む
+      audioBuffer = await decodeWithFFmpeg(rawFile, audioCtx);
+    }
+    
+    log(`Audio Ready. Duration: ${audioBuffer.duration.toFixed(2)}s`);
     
     detectSilence();
     analyzeStatus.innerText = "解析完了";
+
   } catch (e) {
     console.error(e);
     analyzeStatus.innerText = "解析エラー: " + e.message;
     analyzeStatus.className = "status-msg err";
-    log("Decode error: " + e.message);
+    log("Fatal Error: " + e.message);
   } finally {
     analyzeBtn.disabled = false;
   }
 });
+
+// FFmpegを使って音声をWAVに変換し、AudioBufferとして返す関数
+async function decodeWithFFmpeg(file, audioCtx) {
+  // FFmpegがロードされていなければロードする
+  if (!ffmpeg) {
+    await initFFmpeg();
+  }
+  if (!ffmpeg.isLoaded()) {
+    throw new Error("FFmpeg is not loaded.");
+  }
+
+  const { fetchFile } = FFmpeg;
+  const inputName = 'temp_input.mov';
+  const outputName = 'temp_audio.wav';
+
+  log("FFmpeg: Extracting audio track...");
+
+  // ファイルを仮想FSに書き込み
+  ffmpeg.FS('writeFile', inputName, await fetchFile(file));
+
+  // 音声のみを wav (16bit PCM, 44.1kHz, mono) に変換
+  // -ac 1 (モノラル) にすることで処理を軽くし、解析しやすくする
+  await ffmpeg.run(
+    '-i', inputName,
+    '-vn',           // 映像無効
+    '-acodec', 'pcm_s16le',
+    '-ar', '44100',  // サンプリングレート
+    '-ac', '1',      // モノラル
+    outputName
+  );
+
+  // 変換されたWAVファイルを読み込む
+  const data = ffmpeg.FS('readFile', outputName);
+  
+  // 仮想FSのお掃除
+  try {
+    ffmpeg.FS('unlink', inputName);
+    ffmpeg.FS('unlink', outputName);
+  } catch(e) { /* 無視 */ }
+
+  log("FFmpeg: Audio extracted. Decoding wav...");
+
+  // WAVデータをAudioBufferにデコード
+  return await audioCtx.decodeAudioData(data.buffer);
+}
 
 // --- 4. Detect Silence Algorithm ---
 function detectSilence() {
