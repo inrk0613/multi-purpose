@@ -293,11 +293,28 @@ const waveformCanvas = document.getElementById('waveformCanvas');
 const logArea = document.getElementById('ffmpegLog');
 const downloadLink = document.getElementById('downloadLink');
 
-// Sliders
+// Sliders Elements
+const sThreshold = document.getElementById('threshold');
+const sMinDur = document.getElementById('minDuration');
+const sPadding = document.getElementById('padding');
+
+// Status Elements
+const analyzeStatus = document.getElementById('analyzeStatus');
+const exportStatus = document.getElementById('exportStatus');
+const exportProgressBar = document.getElementById('exportProgress');
+
+// --- Utils ---
+const log = (msg) => {
+  logArea.value += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+  logArea.scrollTop = logArea.scrollHeight;
+};
+
 const updateSliderVal = (id, val, unit) => {
   document.getElementById(id).textContent = val + unit;
 };
 
+// --- Slider Events (Corrected) ---
+// 重複していた古いコードを削除し、正しい挙動のみを残しました
 [sThreshold, sMinDur, sPadding].forEach(el => {
   // 1. ドラッグ中：数値の表示だけ更新（重い処理はしない）
   el.addEventListener('input', () => {
@@ -314,11 +331,6 @@ const updateSliderVal = (id, val, unit) => {
   });
 });
 
-// Status
-const analyzeStatus = document.getElementById('analyzeStatus');
-const exportStatus = document.getElementById('exportStatus');
-const exportProgressBar = document.getElementById('exportProgress');
-
 // --- State ---
 let ffmpeg = null;
 let audioBuffer = null; // Web Audio API buffer
@@ -326,24 +338,6 @@ let rawFile = null;
 let detectedSegments = []; // {start, end}
 let isPreviewingCuts = false;
 let previewTimeout = null;
-
-// --- Utils ---
-const log = (msg) => {
-  logArea.value += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
-  logArea.scrollTop = logArea.scrollHeight;
-};
-
-const updateSliderVal = (id, val, unit) => {
-  document.getElementById(id).textContent = val + unit;
-};
-
-[sThreshold, sMinDur, sPadding].forEach(el => {
-  el.addEventListener('input', () => {
-    updateSliderVal(el.id + 'Val', el.value, el.id === 'threshold' ? ' dB' : ' s');
-    // パラメータを変えたら再解析が必要（簡易的にボタンを再活性化）
-    if(audioBuffer) analyzeBtn.click();
-  });
-});
 
 // --- Check Environment ---
 if (!window.crossOriginIsolated) {
@@ -359,7 +353,7 @@ const initFFmpeg = async () => {
   log("Loading ffmpeg-core...");
   ffmpeg = createFFmpeg({
     log: true,
-    corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js', // 明示的に指定
+    corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
     progress: ({ ratio }) => {
       if(ratio >= 0 && ratio <= 1) {
         exportProgressBar.style.width = `${ratio * 100}%`;
@@ -386,6 +380,12 @@ fileInput.addEventListener('change', async (e) => {
   previewPlayer.src = URL.createObjectURL(file);
   previewPlayer.style.display = 'block';
   
+  // Reset State
+  audioBuffer = null;
+  detectedSegments = [];
+  waveformCanvas.getContext('2d').clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+  segmentsList.innerHTML = '<div style="padding:10px; color:#666; text-align:center;">解析待ち...</div>';
+  
   analyzeBtn.disabled = false;
   exportBtn.disabled = true;
   previewCutBtn.disabled = true;
@@ -410,7 +410,6 @@ analyzeBtn.addEventListener('click', async () => {
     try {
       log("Attempting native decode...");
       const arrayBuffer = await rawFile.arrayBuffer();
-      // コピーを作成して渡す（decodeAudioDataはバッファを消費する場合があるため）
       audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
       log("Native decode successful.");
     } catch (nativeError) {
@@ -438,7 +437,6 @@ analyzeBtn.addEventListener('click', async () => {
 
 // FFmpegを使って音声をWAVに変換し、AudioBufferとして返す関数
 async function decodeWithFFmpeg(file, audioCtx) {
-  // FFmpegがロードされていなければロードする
   if (!ffmpeg) {
     await initFFmpeg();
   }
@@ -451,55 +449,47 @@ async function decodeWithFFmpeg(file, audioCtx) {
   const outputName = 'temp_audio.wav';
 
   log("FFmpeg: Extracting audio track...");
-
-  // ファイルを仮想FSに書き込み
   ffmpeg.FS('writeFile', inputName, await fetchFile(file));
 
-  // 音声のみを wav (16bit PCM, 44.1kHz, mono) に変換
-  // -ac 1 (モノラル) にすることで処理を軽くし、解析しやすくする
   await ffmpeg.run(
     '-i', inputName,
-    '-vn',           // 映像無効
+    '-vn',
     '-acodec', 'pcm_s16le',
-    '-ar', '44100',  // サンプリングレート
-    '-ac', '1',      // モノラル
+    '-ar', '44100',
+    '-ac', '1',
     outputName
   );
 
-  // 変換されたWAVファイルを読み込む
   const data = ffmpeg.FS('readFile', outputName);
   
-  // 仮想FSのお掃除
   try {
     ffmpeg.FS('unlink', inputName);
     ffmpeg.FS('unlink', outputName);
   } catch(e) { /* 無視 */ }
 
   log("FFmpeg: Audio extracted. Decoding wav...");
-
-  // WAVデータをAudioBufferにデコード
   return await audioCtx.decodeAudioData(data.buffer);
 }
 
 // --- 4. Detect Silence Algorithm ---
 function detectSilence() {
-  const rawData = audioBuffer.getChannelData(0); // 左チャンネルのみ使用
+  if (!audioBuffer) return;
+
+  const rawData = audioBuffer.getChannelData(0);
   const sampleRate = audioBuffer.sampleRate;
   
   const thresholdDB = parseFloat(sThreshold.value);
   const minDuration = parseFloat(sMinDur.value);
   const padding = parseFloat(sPadding.value);
   
-  const windowSize = Math.floor(sampleRate * 0.05); // 50ms window
+  const windowSize = Math.floor(sampleRate * 0.05); // 50ms
   const segments = [];
   
   let isSpeaking = false;
   let startFrame = 0;
   
-  // RMS計算と区間検出
   for (let i = 0; i < rawData.length; i += windowSize) {
     let sum = 0;
-    // ウィンドウ内のRMSを計算
     const end = Math.min(i + windowSize, rawData.length);
     for (let j = i; j < end; j++) {
       sum += rawData[j] * rawData[j];
@@ -513,19 +503,14 @@ function detectSilence() {
       isSpeaking = true;
       startFrame = i;
     } else if (!isLoud && isSpeaking) {
-      // 話し終わり？ -> まだ確定しない（ごく短い無音は許容するため）
-      // ここでは簡易的に「しきい値を下回ったら即終了」とし、あとで結合する
       isSpeaking = false;
-      const duration = (i - startFrame) / sampleRate;
       segments.push({ start: startFrame / sampleRate, end: i / sampleRate });
     }
   }
-  // 最後まで話していた場合
   if (isSpeaking) {
     segments.push({ start: startFrame / sampleRate, end: rawData.length / sampleRate });
   }
 
-  // 後処理：短い隙間を埋める ＆ 短すぎる発話を消す ＆ パディング
   let merged = [];
   if (segments.length > 0) {
     let current = { 
@@ -538,10 +523,8 @@ function detectSilence() {
       const nextEnd = segments[k].end + padding;
       
       if (nextStart <= current.end) {
-        // 重なってる or 近い -> 結合
         current.end = Math.max(current.end, nextEnd);
       } else {
-        // 離れてる -> 確定
         if (current.end - current.start >= minDuration) {
           merged.push(current);
         }
@@ -553,11 +536,9 @@ function detectSilence() {
     }
   }
   
-  // 範囲制限
-  const duration = audioBuffer.duration;
   detectedSegments = merged.map(s => ({
     start: Math.max(0, s.start),
-    end: Math.min(duration, s.end)
+    end: Math.min(audioBuffer.duration, s.end)
   }));
 
   log(`Segments detected: ${detectedSegments.length}`);
@@ -569,7 +550,10 @@ function detectSilence() {
     exportBtn.disabled = false;
     previewCutBtn.disabled = false;
   } else {
-    alert("有効な区間が見つかりませんでした。しきい値を調整してください。");
+    exportBtn.disabled = true;
+    previewCutBtn.disabled = true;
+    // alert("有効な区間が見つかりませんでした。しきい値を調整してください。"); 
+    // ↑スライダー操作中に毎回alertが出ると邪魔なのでコメントアウト推奨
   }
 }
 
@@ -583,7 +567,6 @@ function drawWaveform(data, sampleRate) {
   ctx.fillStyle = '#222';
   ctx.fillRect(0, 0, w, h);
   
-  // 波形の間引き描画
   const step = Math.ceil(data.length / w);
   const amp = h / 2;
   
@@ -597,7 +580,6 @@ function drawWaveform(data, sampleRate) {
   }
   ctx.stroke();
   
-  // 検出区間をハイライト（緑）
   ctx.fillStyle = 'rgba(3, 218, 198, 0.3)';
   const totalSeconds = data.length / sampleRate;
   
@@ -608,7 +590,6 @@ function drawWaveform(data, sampleRate) {
   });
 }
 
-// Canvas Click to Seek
 waveformCanvas.addEventListener('click', (e) => {
   if(!audioBuffer) return;
   const rect = waveformCanvas.getBoundingClientRect();
@@ -641,13 +622,12 @@ function renderSegmentList() {
   });
 }
 
-// --- 7. Preview Logic (Skip Silence) ---
+// --- 7. Preview Logic ---
 previewCutBtn.addEventListener('click', () => {
   isPreviewingCuts = true;
   previewCutBtn.style.display = 'none';
   stopPreviewBtn.style.display = 'inline-block';
   
-  // 最初の区間にジャンプ
   if(detectedSegments.length > 0) {
     previewPlayer.currentTime = detectedSegments[0].start;
     previewPlayer.play();
@@ -668,47 +648,34 @@ function checkPlayHead() {
   if (previewPlayer.paused) return;
   
   const t = previewPlayer.currentTime;
-  
-  // 現在時刻が含まれるセグメントを探す
   const currentSegIndex = detectedSegments.findIndex(s => t >= s.start && t < s.end);
   
   if (currentSegIndex !== -1) {
-    // セグメント内にいる -> 次のチェックへ
-    // もうすぐ終わるなら次のセグメントの頭へスケジュール
     const seg = detectedSegments[currentSegIndex];
     const remaining = seg.end - t;
-    
     if (remaining < 0.1) {
-      // 次のセグメントへジャンプ
       if (currentSegIndex + 1 < detectedSegments.length) {
         previewPlayer.currentTime = detectedSegments[currentSegIndex + 1].start;
       } else {
-        // 最後まで再生完了
         stopPreviewBtn.click();
         return;
       }
     }
   } else {
-    // セグメント外にいる（ユーザーがシークした場合など）
-    // 現在時刻より未来にある一番近いセグメントへジャンプ
     const nextSeg = detectedSegments.find(s => s.start > t);
     if (nextSeg) {
       previewPlayer.currentTime = nextSeg.start;
     } else {
-      // もう未来にセグメントがない
       stopPreviewBtn.click();
       return;
     }
   }
-  
   previewTimeout = setTimeout(checkPlayHead, 50);
 }
 
 // --- 8. Export (FFmpeg) ---
 exportBtn.addEventListener('click', async () => {
-  if (!ffmpeg) {
-    await initFFmpeg();
-  }
+  if (!ffmpeg) await initFFmpeg();
   if (!ffmpeg.isLoaded()) {
     alert("FFmpegがロードされていません。");
     return;
@@ -726,31 +693,22 @@ exportBtn.addEventListener('click', async () => {
     
     ffmpeg.FS('writeFile', inputName, await fetchFile(rawFile));
     
-    // 複雑なfilter_complexを作成
-    // [0:v]trim=start=0:end=5,setpts=PTS-STARTPTS[v0];...
     let filterStr = "";
     let maps = "";
     
     detectedSegments.forEach((seg, i) => {
       const start = seg.start.toFixed(3);
       const end = seg.end.toFixed(3);
-      // Video
       filterStr += `[0:v]trim=start=${start}:end=${end},setpts=PTS-STARTPTS[v${i}];`;
-      // Audio
       filterStr += `[0:a]atrim=start=${start}:end=${end},asetpts=PTS-STARTPTS[a${i}];`;
-      
       maps += `[v${i}][a${i}]`;
     });
     
     filterStr += `${maps}concat=n=${detectedSegments.length}:v=1:a=1[outv][outa]`;
     
-    log("Starting FFmpeg process...");
-    log("Filter: " + filterStr); // フィルタが長すぎるとブラウザによっては落ちる可能性があります
-
+    log("Filter: " + filterStr);
     exportStatus.innerText = "エンコード中... (時間がかかります)";
     
-    // 実行
-    // -preset ultrafast で高速化 (画質より速度優先)
     await ffmpeg.run(
       '-i', inputName,
       '-filter_complex', filterStr,
@@ -760,7 +718,6 @@ exportBtn.addEventListener('click', async () => {
       outputName
     );
     
-    log("Encoding complete.");
     exportStatus.innerText = "書き出し完了！";
     
     const data = ffmpeg.FS('readFile', outputName);
@@ -771,14 +728,13 @@ exportBtn.addEventListener('click', async () => {
     downloadLink.download = `cut_${rawFile.name}`;
     downloadLink.style.display = 'inline-block';
     
-    // Clean up
     ffmpeg.FS('unlink', inputName);
     ffmpeg.FS('unlink', outputName);
     
   } catch (e) {
     console.error(e);
     log("Export Error: " + e.message);
-    exportStatus.innerText = "エラーが発生しました (ログを確認してください)";
+    exportStatus.innerText = "エラーが発生しました";
     exportStatus.className = "status-msg err";
   } finally {
     exportBtn.disabled = false;
