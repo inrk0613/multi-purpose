@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>無音区間オートカット Pro</title>
+  <title>無音区間オートカット</title>
 
   <!-- ffmpeg.wasm (CDN) -->
   <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
@@ -11,7 +11,7 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
 
   <!-- Service Worker (COOP/COEP) -->
   <script>
@@ -24,26 +24,28 @@
 
   <style>
     :root {
-      /* --- Dark Mode (Default) --- */
-      --bg-body: #050505;
-      --bg-grad-1: #1a1f2c;
+      /* --- Dark Mode Variables (Pro Liquid Glass) --- */
+      --bg-body: #000000;
+      --bg-grad-1: #0f1219; /* Deep Midnight */
       --bg-grad-2: #000000;
       
-      /* Liquid Glass Variables */
-      --glass-bg: rgba(20, 25, 35, 0.65);
-      --glass-border: rgba(255, 255, 255, 0.08);
-      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+      /* Liquid Glass Dark */
+      --glass-bg: rgba(28, 28, 30, 0.65);
+      --glass-border: color-mix(in srgb, var(--primary) 16%, transparent);
+      --glass-shadow: 0 20px 40px 0 rgba(0, 0, 0, 0.6);
       
-      --primary: #8DC21F;
+      /* Brand Colors (Dark Mode) */
+      --primary: #8DC21F;       /* Logo Green */
       --primary-hover: #a3db2e;
-      --accent: #4aa3ff;
+      --accent: #60fa74;        /* Sky Blue for visibility in dark */
       
-      --text-main: #e2e8f0;
-      --text-muted: #94a3b8;
-      --text-logo: #e2e8f0; /* Logo text color */
+      /* Text Colors (Dark Mode) */
+      --text-main: #f5f5f7;     /* Apple Off-White */
+      --text-muted: #86868b;    /* Apple Gray */
+      --text-logo: #f5f5f7;
       
-      --input-bg: rgba(0, 0, 0, 0.3);
-      --radius: 16px; /* Apple-like rounded corners */
+      --input-bg: rgba(255, 255, 255, 0.08);
+      --radius: 20px;
       
       --font-base: "Noto Sans JP", "Inter", sans-serif;
       --font-mono: "Roboto Mono", monospace;
@@ -51,27 +53,28 @@
 
     /* --- Light Mode Override --- */
     body.light-mode {
-      --bg-body: #f0f2f5;
-      --bg-grad-1: #e0eafc;
-      --bg-grad-2: #cfdef3;
+      --bg-body: #f2f4f7;
+      --bg-grad-1: #eef2f6;
+      --bg-grad-2: #e0e7ff;
       
-      /* Apple-like Frosted Glass */
-      --glass-bg: rgba(255, 255, 255, 0.65);
-      --glass-border: rgba(255, 255, 255, 0.4);
-      --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+      /* Liquid Glass Light */
+      --glass-bg: rgba(255, 255, 255, 0.75);
+      --glass-border: color-mix(in srgb, var(--primary) 36%, transparent);
+      --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
       
-      --primary: #7cb113; /* Slightly darker for contrast */
+      /* Brand Colors (Light Mode) */
+      --primary: #74a813; 
       --primary-hover: #8DC21F;
-      --accent: #007aff; /* Apple Blue */
+      --accent: #03a454;
       
       --text-main: #1d1d1f;
       --text-muted: #6e6e73;
-      --text-logo: #1d1d1f;
+      --text-logo: #595757;
       
-      --input-bg: rgba(255, 255, 255, 0.5);
+      --input-bg: rgba(255, 255, 255, 0.6);
     }
 
-    * { box-sizing: border-box; transition: background-color 0.3s, color 0.3s, border-color 0.3s; }
+    * { box-sizing: border-box; transition: background-color 0.3s, color 0.3s, border-color 0.3s, fill 0.3s; }
 
     body {
       margin: 0;
@@ -84,57 +87,66 @@
       overflow: hidden;
     }
 
-    /* Ambient Background Orb (Decoration) */
+    /* Ambient Background Orb */
     .bg-orb {
       position: absolute;
-      width: 600px; height: 600px;
-      background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
-      opacity: 0.15;
-      top: -200px; right: -100px;
+      width: 900px; height: 900px;
+      background: radial-gradient(circle, var(--primary) 0%, transparent 65%);
+      opacity: 0.08; /* Dark mode needs subtle glow */
+      top: -400px; right: -200px;
       pointer-events: none;
       z-index: 0;
-      filter: blur(80px);
+      filter: blur(120px);
+      transition: opacity 0.5s;
     }
+    body.light-mode .bg-orb { opacity: 0.15; } /* Brighter in light mode */
 
     /* --- Header --- */
     header {
-      height: 64px;
+      height: 72px;
       background: var(--glass-bg);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--glass-border);
       display: flex;
       align-items: center;
-      padding: 0 24px;
+      padding: 0 32px;
       flex-shrink: 0;
       z-index: 100;
-      position: relative;
     }
     .header-inner {
       width: 100%; max-width: 1920px; margin: 0 auto;
       display: flex; justify-content: space-between; align-items: center;
     }
-    .logo { width: 130px; }
-    .logo svg { width: 100%; height: auto; display: block; }
     
+    /* Logo Styling */
+    .logo { width: 220px; height: auto; } 
+    .logo svg { width: 100%; height: auto; display: block; }
+    /* Logo Text Color Adjustment */
+
+    /* Icons (SVG) */
+    .icon { width: 18px; height: 18px; fill: currentColor; display: inline-block; vertical-align: middle; }
+    .icon-lg { width: 32px; height: 32px; fill: currentColor; }
+    .icon-btn { margin-right: 8px; }
+
     /* Theme Toggle Button */
     .theme-toggle {
       background: var(--input-bg);
       border: 1px solid var(--glass-border);
       color: var(--text-main);
-      width: 36px; height: 36px;
+      width: 40px; height: 40px;
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       cursor: pointer;
-      font-size: 18px;
+      transition: 0.2s;
     }
-    .theme-toggle:hover { background: var(--glass-border); }
+    .theme-toggle:hover { background: var(--glass-border); transform: scale(1.05); }
 
     /* --- Main Layout --- */
     main {
       flex: 1;
       display: grid;
-      grid-template-columns: 380px 1fr;
+      grid-template-columns: 450px 1fr;
       gap: 0;
       overflow: hidden;
       width: 100%;
@@ -149,26 +161,25 @@
       main { display: flex; flex-direction: column; overflow: visible; }
       .panel-right { order: 1; height: auto; border-bottom: 1px solid var(--glass-border); }
       .panel-left { order: 2; height: auto; border-right: none; }
-      .preview-container { max-height: 45vh; }
+      .preview-container { max-height: 35vh; max-width: 100%; }
     }
 
-    /* --- Panels (Liquid Glass Style) --- */
+    /* --- Panels --- */
     .panel-left {
       background: var(--glass-bg);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
       border-right: 1px solid var(--glass-border);
-      padding: 24px;
+      padding: 32px;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 28px;
       overflow-y: auto;
     }
 
     .panel-right {
-      /* Right panel is slightly more transparent to show background */
       background: rgba(0,0,0,0.02); 
-      padding: 24px;
+      padding: 32px;
       display: flex;
       flex-direction: column;
       gap: 20px;
@@ -176,168 +187,326 @@
     }
 
     h2 {
-      margin: 0 0 12px;
-      font-size: 13px;
+      margin: 0 0 16px;
+      font-size: 14px;
       font-weight: 700;
       color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      display: flex; align-items: center; gap: 8px;
+      letter-spacing: 0.08em;
+      display: flex; align-items: center; gap: 10px;
     }
-    h2::before { content: ''; width: 4px; height: 14px; background: var(--primary); border-radius: 2px; }
+    h2 svg { color: var(--primary); width: 18px; height: 18px; }
 
     /* --- Components --- */
-    
-    /* Card Style Mixin */
     .glass-card {
       background: var(--glass-bg);
       border: 1px solid var(--glass-border);
       border-radius: var(--radius);
       box-shadow: var(--glass-shadow);
       backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
     }
 
+    /* Drop Zone */
     .drop-zone {
       @extend .glass-card;
       background: var(--input-bg);
       border: 2px dashed var(--glass-border);
       border-radius: var(--radius);
-      padding: 24px;
+      padding: 30px 20px;
       text-align: center;
       cursor: pointer;
       transition: 0.2s;
+      color: var(--text-muted);
     }
-    .drop-zone:hover { border-color: var(--primary); background: rgba(141,194,31,0.08); }
-    .drop-zone-text { font-size: 14px; font-weight: 600; margin-top: 8px; color: var(--text-main); }
+    .drop-zone:hover { 
+      border-color: var(--primary); 
+      background: rgba(141,194,31,0.08); 
+      color: var(--primary);
+    }
+    .drop-zone-icon { margin-bottom: 12px; color: inherit; }
+    .drop-zone-text { font-size: 15px; font-weight: 700; margin-top: 0; color: var(--text-main); }
 
-    /* Stats Card */
+    /* Stats Card (Theme Aware) */
     .stats-card {
-      background: linear-gradient(135deg, rgba(74, 163, 255, 0.1), rgba(74, 163, 255, 0.02));
-      border: 1px solid rgba(74, 163, 255, 0.3);
+      /* Dark Mode Default: Green Glow */
+      background: linear-gradient(135deg, rgba(34, 194, 31, 0.276), rgba(141, 194, 31, 0.02));
+      border: 1px solid color-mix(in srgb, var(--primary) 36%, transparent);
       border-radius: var(--radius);
       padding: 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s;
+    }
+    /* Light Mode Override: Blue Glow */
+    body.light-mode .stats-card {
+      background: linear-gradient(135deg, rgba(13, 193, 31, 0.253), rgba(74, 255, 222, 0.238));
+      border: 1px solid color-mix(in srgb, var(--primary) 36%, transparent);
       box-shadow: 0 4px 12px rgba(74, 163, 255, 0.1);
     }
-    .stat-item { text-align: center; }
-    .stat-label { font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 4px; }
-    .stat-value { font-family: var(--font-mono); font-size: 15px; font-weight: 700; color: var(--text-main); }
-    .stat-arrow { color: var(--text-muted); font-size: 16px; padding: 0 8px; }
-    .stat-saving { color: var(--primary); font-size: 12px; font-weight: bold; }
 
-    /* Sliders Control Group */
+    .stat-item { text-align: center; }
+    .stat-label { font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 4px; font-weight: 600; }
+    .stat-value { font-family: var(--font-mono); font-size: 16px; font-weight: 700; color: var(--text-main); }
+    .stat-arrow { color: var(--text-muted); width: 16px; height: 16px; }
+    .stat-saving { color: var(--primary); font-size: 12px; font-weight: 800; }
+    body.light-mode .stat-saving { color: var(--accent); } /* Blue in light mode */
+
+    /* Sliders */
     .control-group {
       background: var(--input-bg);
       border: 1px solid var(--glass-border);
       border-radius: var(--radius);
-      padding: 18px;
-      box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+      padding: 24px;
+      box-shadow: inset 0 1px 1px rgba(255,255,255,0.05);
     }
-    .slider-item { margin-bottom: 20px; }
-    .slider-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; }
-    .label-val { color: var(--accent); font-family: var(--font-mono); font-weight: 600; }
+    .slider-item { margin-bottom: 28px; }
+    .slider-item:last-child { margin-bottom: 0; }
+    .slider-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px; font-weight: 600; }
+    .label-val { color: var(--accent); font-family: var(--font-mono); font-size: 14px; }
     
     input[type="range"] {
       width: 100%; -webkit-appearance: none; background: transparent; cursor: pointer;
     }
     input[type="range"]::-webkit-slider-runnable-track {
-      width: 100%; height: 4px; background: var(--glass-border); border-radius: 2px;
+      width: 100%; height: 8px; background: var(--glass-border); border-radius: 4px;
     }
     input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none; height: 20px; width: 20px;
-      border-radius: 50%; background: var(--text-main); margin-top: -8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3); transition: transform 0.1s;
+      -webkit-appearance: none; height: 26px; width: 26px;
+      border-radius: 50%; background: var(--text-main); margin-top: -9px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4); transition: transform 0.1s;
       border: 1px solid var(--glass-border);
     }
-    input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.1); background: var(--primary); border-color: transparent; }
+    input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.15); background: var(--primary); border-color: transparent; }
 
-    /* Waveform */
-    .waveform-wrap {
-      background: #080808; /* Keep waveform dark for contrast */
-      border-radius: var(--radius);
-      border: 1px solid var(--glass-border);
-      height: 110px; overflow: hidden;
-      position: relative;
+    /* 説明文のスタイル */
+    .slider-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      line-height: 1.4;
+      opacity: 0.9;
     }
-    canvas { width: 100%; height: 100%; display: block; }
 
     /* Preview Player */
     .preview-container {
-      width: 100%; background: #000; border-radius: var(--radius);
-      overflow: hidden; border: 1px solid var(--glass-border);
-      box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-      display: flex; justify-content: center; align-items: center;
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+      background: #000; 
+      border-radius: var(--radius);
+      overflow: hidden; 
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      display: flex; 
+      justify-content: center; 
+      align-items: center;
       aspect-ratio: 16 / 9;
+      flex-shrink: 0;
     }
     video { width: 100%; height: 100%; object-fit: contain; }
 
+    /* Timeline / Waveform */
+    .timeline-wrap {
+      width: 100%; 
+      background: #050505; /* Almost Black */
+      border-radius: var(--radius);
+      border: 1px solid var(--glass-border);
+      height: 120px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+    }
+    canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
+    
+    .timeline-info {
+      display: flex; justify-content: space-between;
+      font-size: 10px; color: var(--text-muted);
+      margin-top: 4px; padding: 0 4px;
+    }
+
     /* Buttons */
     .btn {
-      width: 100%; padding: 14px; border: none; border-radius: 12px;
-      font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 16px; border: none; border-radius: 14px;
+      font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
       letter-spacing: 0.02em;
     }
     .btn-primary { 
       background: var(--primary); color: #050505; 
-      box-shadow: 0 4px 15px rgba(141, 194, 31, 0.3);
+      box-shadow: 0 4px 20px rgba(141, 194, 31, 0.2);
     }
-    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-1px); }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 8px 25px rgba(141, 194, 31, 0.4); }
     .btn-primary:disabled { background: var(--input-bg); color: var(--text-muted); cursor: not-allowed; box-shadow: none; }
     
     .btn-secondary { 
       background: var(--input-bg); color: var(--text-main); 
       border: 1px solid var(--glass-border);
+      padding: 12px;
     }
     .btn-secondary:hover { background: var(--glass-border); }
 
-    /* Export Area */
+    /* Export Section */
     .export-section {
       background: var(--glass-bg);
-      backdrop-filter: blur(20px);
+      backdrop-filter: blur(24px);
       border: 1px solid var(--glass-border);
       border-radius: var(--radius); 
       padding: 20px;
-      box-shadow: var(--glass-shadow);
+      margin-top: auto;
     }
     .progress-bar {
-      height: 6px; background: var(--glass-border);
-      border-radius: 3px; margin: 12px 0; overflow: hidden;
+      height: 8px; background: var(--glass-border);
+      border-radius: 4px; margin: 12px 0; overflow: hidden;
     }
     .progress-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.2s; }
-    
-    .log-console {
-      font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
-      height: 60px; overflow-y: auto; border-top: 1px solid var(--glass-border);
-      padding-top: 8px; margin-top: 12px; line-height: 1.4;
-    }
     
     #downloadBtn {
       display: none;
       text-decoration: none; text-align: center; 
-      background: rgba(74, 163, 255, 0.1); color: var(--accent);
-      padding: 12px; border-radius: 10px; font-size: 13px; font-weight: 600;
+      background: rgba(74, 163, 255, 0.15); color: var(--accent);
+      padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 700;
       margin-top: 12px; transition: 0.2s;
     }
-    #downloadBtn:hover { background: rgba(74, 163, 255, 0.2); }
+    #downloadBtn:hover { background: rgba(74, 163, 255, 0.25); }
+
+    /* Log Console */
+    .log-console {
+      font-family: var(--font-mono); font-size: 10px; color: var(--text-muted);
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      padding: 12px;
+      height: 120px;
+      overflow-y: auto;
+      margin-top: auto;
+      line-height: 1.4;
+    }
+
+    /* --- Help Modal (Liquid Glass Style) --- */
+    
+    /* 背景グラデーションアニメーション定義 */
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      /* 鮮やかなアニメーション背景 */
+      background: linear-gradient(135deg,
+          rgba(102, 126, 234, 0.086) 0%,
+          rgba(118, 75, 162, 0.09) 25%,
+          rgba(240, 147, 251, 0.09) 50%,
+          rgba(245, 87, 108, 0.09) 75%,
+          rgba(79, 172, 254, 0.09) 100%);
+      background-size: 400% 400%;
+      animation: gradientShift 15s ease infinite;
+      
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+      
+      /* 3D効果のためのパースペクティブ */
+      perspective: 1000px;
+      backdrop-filter: blur(10px); /* 背景を少しぼかす */
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
+    
+    .modal-card {
+      width: 90%; max-width: 600px; max-height: 85vh;
+      
+      /* リキッドグラスのスタイル */
+      background: rgba(27, 27, 27, 0.534);
+      backdrop-filter: blur(20px) saturate(1.8);
+      -webkit-backdrop-filter: blur(20px) saturate(1.8);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 24px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+      
+      color: #ffffff; /* テキストは白固定 */
+      display: flex; flex-direction: column;
+      position: relative; overflow: hidden;
+      
+
+    
+    /* 光沢エフェクト */
+    .modal-card::before {
+      content: ''; position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(255,255,255,0.1) 100%);
+      opacity: 0.5; pointer-events: none; z-index: 0;
+    }
+
+    .modal-header {
+      padding: 24px 30px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+      display: flex; justify-content: space-between; align-items: center;
+      position: relative; z-index: 1;
+    }
+    
+    /* タイトルのグラデーション文字 */
+    .modal-header h2 { 
+      margin: 0; font-size: 22px; font-weight: 700; 
+      background: linear-gradient(45deg, #ffffff, #ffffff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 2px 10px rgb(255, 255, 255);
+    }
+
+    .close-btn {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: #fff;
+      width: 32px; height: 32px; border-radius: 50%;
+      font-size: 20px; cursor: pointer; 
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.3s ease;
+    }
+    .close-btn:hover { 
+      background: rgba(255, 255, 255, 0.3); 
+      transform: rotate(90deg);
+    }
+    
+    .modal-body {
+      padding: 30px; overflow-y: auto;
+      font-size: 15px; line-height: 1.7;
+      position: relative; z-index: 1;
+    }
+    
+    /* スクロールバーのカスタマイズ */
+    .modal-body::-webkit-scrollbar { width: 6px; }
+    .modal-body::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+    .modal-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+    
+    .modal-body h3 { 
+      margin-top: 0; color: #fff; font-size: 18px; 
+      border-left: 4px solid rgba(255,255,255,0.8); 
+      padding-left: 12px; margin-bottom: 16px;
+    }
+    .modal-body h4 { margin: 24px 0 10px; color: #fff; font-size: 15px; font-weight: 700; opacity: 0.9; }
+    .modal-body p { margin: 0 0 16px; color: rgba(255,255,255,0.9); }
+    .modal-body ul { padding-left: 20px; color: rgba(255,255,255,0.85); margin-bottom: 20px; }
+    .modal-body li { margin-bottom: 8px; }
+    .modal-body strong { color: #fff; font-weight: 700; text-decoration: underline decoration-thickness 1px; text-underline-offset: 2px; }
+
+
   </style>
 </head>
-<body>
+<body class="light-mode">
 
   <!-- Ambient Orb -->
   <div class="bg-orb"></div>
 
   <header>
     <div class="header-inner">
-       <div class="header-inner">
-      <!-- ロゴ -->
+
       <div class="logo">
         <svg version="1.1" xmlns="http://www.w3.org/2000/svg"
              xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-             viewBox="0 0 288 44" style="enable-background:new 0 0 266 44;" xml:space="preserve">
+             viewBox="0 0 266 44" style="enable-background:new 0 0 266 44;" xml:space="preserve">
           <style type="text/css">
             .st0{fill:#C0CD7D;}
             .st1{fill:#8DC21F;}
@@ -386,54 +555,72 @@
         </svg>
       </div>
       
-      <button id="themeToggle" class="theme-toggle" title="モード切替">
-        ☀
+
+
+      
+      <button id="themeToggle" class="theme-toggle" title="テーマ切替">
+        <svg id="iconMoon" class="icon" viewBox="0 0 24 24" style="display:none;"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-3.03 0-5.5-2.47-5.5-5.5 0-1.82.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
+        <svg id="iconSun" class="icon" viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0a.996.996 0 000-1.41l-1.06-1.06zm1.06-10.96a.996.996 0 000-1.41.996.996 0 00-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36a.996.996 0 000 1.41.996.996 0 001.41 0l1.06-1.06c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0l-1.06 1.06z"/></svg>
       </button>
     </div>
+
+        <!-- ▼▼▼ 追加した部分 ▼▼▼ -->
+        <button id="helpBtn" class="theme-toggle" title="使い方">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>
+        </button>
+        <!-- ▲▲▲ 追加ここまで ▲▲▲ -->
+        
+
   </header>
 
+  
+
   <main>
-    <!-- Left Panel: Controls -->
+    <!-- Left Panel: Settings & Controls -->
     <div class="panel-left">
       
+      <!-- File Import -->
       <label class="drop-zone">
         <input type="file" id="fileInput" accept="video/*,audio/*" style="display:none;">
-        <div style="font-size:28px; margin-bottom:4px;">📂</div>
+        <div class="drop-zone-icon">
+          <svg class="icon-lg" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+        </div>
         <div class="drop-zone-text">動画ファイルを選択</div>
-        <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">タップ または ドラッグ＆ドロップ</div>
+        <div style="font-size:12px; color:var(--text-muted); margin-top:6px;">タップ または ドラッグ＆ドロップ</div>
       </label>
 
-      <div>
-        <h2>音量解析</h2>
-        <div class="waveform-wrap">
-          <canvas id="waveformCanvas"></canvas>
-        </div>
-      </div>
-
-      <!-- Real-time Stats -->
+      <!-- Stats -->
       <div class="stats-card">
         <div class="stat-item">
-          <span class="stat-label">元の長さ</span>
+          <span class="stat-label">元動画</span>
           <span class="stat-value" id="statOriginal">--:--</span>
         </div>
-        <div class="stat-arrow">➝</div>
+        <div class="stat-arrow">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+        </div>
         <div class="stat-item">
           <span class="stat-label">カット後</span>
           <span class="stat-value" id="statNew" style="color:var(--primary);">--:--</span>
         </div>
         <div class="stat-item">
-          <span class="stat-label">短縮</span>
+          <span class="stat-label">短縮率</span>
           <span class="stat-saving" id="statSaving"></span>
         </div>
       </div>
 
+      <!-- Adjustments -->
       <div class="control-group">
-        <h2>パラメータ調整</h2>
+        <h2>
+          <svg class="icon" viewBox="0 0 24 24"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>
+          パラメータ調整
+        </h2>
+        
         <div class="slider-item">
           <div class="slider-header">
             <span>しきい値 (Threshold)</span>
             <span class="label-val" id="thresholdVal">-30 dB</span>
           </div>
+          <div class="slider-desc">この値より小さい音を「無音」とみなしてカットします。</div>
           <input type="range" id="threshold" min="-60" max="-10" value="-30" step="1">
         </div>
 
@@ -442,6 +629,7 @@
             <span>最短発話時間</span>
             <span class="label-val" id="minDurationVal">0.3 s</span>
           </div>
+          <div class="slider-desc">これより短い音はノイズとみなして無視します。</div>
           <input type="range" id="minDuration" min="0.1" max="2.0" value="0.3" step="0.1">
         </div>
 
@@ -450,13 +638,18 @@
             <span>前後の余白</span>
             <span class="label-val" id="paddingVal">0.1 s</span>
           </div>
+          <div class="slider-desc">ブツ切り感を防ぐため、カット区間の前後に余韻を残します。</div>
           <input type="range" id="padding" min="0.0" max="1.0" value="0.1" step="0.05">
         </div>
 
-        <button id="analyzeBtn" class="btn btn-primary" style="margin-top:16px;" disabled>
+        <button id="analyzeBtn" class="btn btn-primary" style="margin-top:24px;" disabled>
+          <svg class="icon icon-btn" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
           音量を解析
         </button>
       </div>
+
+      <!-- Log Console -->
+      <div class="log-console" id="logConsole">System Ready...</div>
     </div>
 
     <!-- Right Panel: Preview & Output -->
@@ -466,44 +659,126 @@
       <div class="preview-container">
         <video id="previewPlayer" playsinline controls></video>
       </div>
+
+      <!-- Timeline / Waveform -->
+      <div>
+        <div class="timeline-wrap">
+          <canvas id="waveformCanvas" title="クリックでシーク"></canvas>
+        </div>
+        <div class="timeline-info">
+          <span>Waveform</span>
+          <span>Timeline Navigation</span>
+        </div>
+      </div>
       
-      <div style="display:flex; gap:12px;">
-        <button id="previewCutBtn" class="btn btn-secondary" disabled>▶ カット後プレビュー</button>
-        <button id="stopPreviewBtn" class="btn btn-secondary" style="display:none; color:#ff6b6b;">■ 停止</button>
+      <!-- Playback Controls -->
+      <div style="display:flex; gap:16px;">
+        <button id="previewCutBtn" class="btn btn-secondary" disabled>
+          <svg class="icon icon-btn" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          カット後のプレビュー再生
+        </button>
+        <button id="stopPreviewBtn" class="btn btn-secondary" style="display:none; color:#ff6b6b;">
+          <svg class="icon icon-btn" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+          停止
+        </button>
       </div>
 
-      <!-- Export Section -->
-      <div class="export-section" style="margin-top:auto;">
+      <!-- Export -->
+      <div class="export-section">
         <button id="exportBtn" class="btn btn-primary" disabled>
-          動画を書き出し (自動保存)
+          <svg class="icon icon-btn" viewBox="0 0 24 24"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>
+          書き出し & 自動保存
         </button>
         
         <div class="progress-bar">
           <div id="exportProgress" class="progress-fill"></div>
         </div>
-        <div id="exportStatus" style="font-size:12px; color:var(--text-muted); text-align:center; min-height:18px;"></div>
+        <div id="exportStatus" style="font-size:13px; color:var(--text-muted); text-align:center; min-height:20px;"></div>
         
-        <a id="downloadBtn" href="#" download>⬇ 手動ダウンロード</a>
-        
-        <div class="log-console" id="logConsole">System Ready.</div>
+        <a id="downloadBtn" href="#" download>
+          <svg class="icon icon-btn" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          手動ダウンロード
+        </a>
       </div>
 
     </div>
+
   </main>
 
+  <!-- Help Modal -->
+  <div id="helpModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>使い方マニュアル</h2>
+        <button id="closeHelp" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <h3>1. はじめに</h3>
+        <p>動画や音声ファイルから「無音（話していない区間）」を自動検出してカットするツールです。すべての処理はブラウザ内で行われ、外部サーバーへのアップロードは発生しません。</p>
+        
+        <h3>2. 基本的な使い方</h3>
+        <h4>ステップ1：ファイルを読み込む</h4>
+        <p>左上の「動画ファイルを選択」エリアをタップするか、ファイルをドロップします。</p>
+        
+        <h4>ステップ2：パラメータ調整</h4>
+        <ul>
+          <li><strong>しきい値:</strong> この値より小さい音を「無音」とみなします。</li>
+          <li><strong>最短発話時間:</strong> 短すぎる音（ノイズ等）を無視します。</li>
+          <li><strong>前後の余白:</strong> 自然な繋がりのために余韻を残します。</li>
+        </ul>
+        
+        <h4>ステップ3：解析と確認</h4>
+        <p>「音量を解析」ボタンを押すと、波形と予想時間が表示されます。「カット後のプレビュー再生」で確認できます。</p>
+        
+        <h4>ステップ4：書き出し</h4>
+        <p>「書き出し & 自動保存」を押すと、編集された動画が作成され自動的にダウンロードされます。</p>
+        
+        <h3>3. トラブルシューティング</h3>
+        <p><strong>解析できない場合:</strong> 別のファイル形式を試すか、ページをリロードしてください。4Kなどの高解像度動画はメモリ不足になる場合があります。</p>
+      </div>
+    </div>
+  </div>
+
+
   <script>
-  // --- Theme Toggle ---
+    // --- Help Modal Logic ---
+  const helpBtn = document.getElementById('helpBtn');
+  const helpModal = document.getElementById('helpModal');
+  const closeHelp = document.getElementById('closeHelp');
+
+  function openModal() {
+    helpModal.classList.add('open');
+  }
+  function closeModal() {
+    helpModal.classList.remove('open');
+  }
+
+  helpBtn.addEventListener('click', openModal);
+  closeHelp.addEventListener('click', closeModal);
+  helpModal.addEventListener('click', (e) => {
+    // 背景クリックでも閉じるようにする
+    if (e.target === helpModal) closeModal();
+  });
+
+
+  // --- Theme Toggle Logic ---
   const themeToggle = document.getElementById('themeToggle');
-  let isDarkMode = true;
+  const iconSun = document.getElementById('iconSun');
+  const iconMoon = document.getElementById('iconMoon');
+  
+  // 初期状態: ライトモード (isDarkMode = false)
+  let isDarkMode = false;
 
   themeToggle.addEventListener('click', () => {
     isDarkMode = !isDarkMode;
     if (isDarkMode) {
       document.body.classList.remove('light-mode');
-      themeToggle.innerText = '☀';
+      iconSun.style.display = 'none';
+      iconMoon.style.display = 'block';
     } else {
       document.body.classList.add('light-mode');
-      themeToggle.innerText = '🌙';
+      iconSun.style.display = 'block';
+      iconMoon.style.display = 'none';
     }
   });
 
@@ -520,12 +795,10 @@
   const exportStatus = document.getElementById('exportStatus');
   const logConsole = document.getElementById('logConsole');
 
-  // Stats Elements
   const statOriginal = document.getElementById('statOriginal');
   const statNew = document.getElementById('statNew');
   const statSaving = document.getElementById('statSaving');
 
-  // Sliders
   const sThreshold = document.getElementById('threshold');
   const sMinDur = document.getElementById('minDuration');
   const sPadding = document.getElementById('padding');
@@ -574,7 +847,7 @@
       updateSliderUI(el.id, el.value, el.id === 'threshold' ? ' dB' : ' s');
       if (audioBuffer) {
         const rawData = audioBuffer.getChannelData(0);
-        drawWaveform(rawData); // Redraw for threshold line
+        drawWaveform(rawData); 
       }
     });
     el.addEventListener('change', () => {
@@ -621,13 +894,14 @@
     const ctx = waveformCanvas.getContext('2d');
     ctx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
     document.querySelector('.drop-zone-text').innerText = file.name;
+    log(`File Selected: ${file.name}`);
   });
 
   // Analyze
   analyzeBtn.addEventListener('click', async () => {
     if (!rawFile) return;
     analyzeBtn.disabled = true;
-    log("解析中...");
+    log("解析を開始...");
     
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -635,13 +909,13 @@
         const ab = await rawFile.arrayBuffer();
         audioBuffer = await audioCtx.decodeAudioData(ab.slice(0));
       } catch (e) {
-        log("FFmpegで解析用音声を抽出中...");
+        log("FFmpegで音声抽出中...");
         audioBuffer = await decodeWithFFmpeg(rawFile, audioCtx);
       }
       detectSilence();
       log("解析完了");
     } catch (e) {
-      log("解析エラー: " + e.message);
+      log("エラー: " + e.message);
     } finally {
       analyzeBtn.disabled = false;
     }
@@ -715,16 +989,19 @@
     previewCutBtn.disabled = !valid;
   }
 
-  // Draw Wave & Threshold
+  // Draw Wave
   function drawWaveform(data) {
     const ctx = waveformCanvas.getContext('2d');
     const w = waveformCanvas.width = waveformCanvas.offsetWidth;
     const h = waveformCanvas.height = waveformCanvas.offsetHeight;
     ctx.clearRect(0,0,w,h); 
     
-    // BG: depends on mode? Let's keep it dark for contrast or use semi-transparent
-    // For waveform visibility, a dark background is usually best even in light mode
-    ctx.fillStyle = '#080808'; 
+    // Use CSS Variable for Background? No, keep distinct for visibility.
+    // Or better, use semi-transparent fill to blend with theme.
+    ctx.fillStyle = isDarkMode ? 'rgba(255,255,255,0.05)' : '#080808'; 
+    // However, canvas context doesn't know CSS vars easily.
+    // Let's stick to Dark BG for waveform as it looks "Pro" in both modes usually.
+    ctx.fillStyle = '#080808';
     ctx.fillRect(0,0,w,h);
     
     let maxAmp = 0;
@@ -759,17 +1036,25 @@
     ctx.stroke(); ctx.setLineDash([]);
   }
 
+  // Canvas Seek
+  waveformCanvas.addEventListener('click', (e) => {
+    if(!audioBuffer) return;
+    const rect = waveformCanvas.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    previewPlayer.currentTime = ratio * audioBuffer.duration;
+  });
+
   // Preview
   previewCutBtn.addEventListener('click', () => {
     if(!detectedSegments.length) return;
     isPreviewingCuts = true;
-    previewCutBtn.style.display = 'none'; stopPreviewBtn.style.display = 'inline-block';
+    previewCutBtn.style.display = 'none'; stopPreviewBtn.style.display = 'inline-flex';
     previewPlayer.currentTime = detectedSegments[0].start;
     previewPlayer.play(); checkPlayHead();
   });
   stopPreviewBtn.addEventListener('click', () => {
     isPreviewingCuts = false; previewPlayer.pause();
-    stopPreviewBtn.style.display = 'none'; previewCutBtn.style.display = 'inline-block';
+    stopPreviewBtn.style.display = 'none'; previewCutBtn.style.display = 'inline-flex';
     clearTimeout(previewTimeout);
   });
   function checkPlayHead() {
