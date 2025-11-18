@@ -5,22 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Silence Cutter Pro - ブラウザ完結型 自動無音カットツール</title>
     
-    <!-- Tailwind CSS for UI -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- FFmpeg.wasm Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.6/dist/ffmpeg-core.js"></script>
+    <!-- FFmpeg.wasm Scripts (unpkgを使用) -->
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js" crossorigin="anonymous"></script>
 
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        /* Custom Styles */
         :root {
             --primary-color: #3b82f6;
             --bg-dark: #0f172a;
-            --panel-bg: #1e293b;
         }
         body {
             background-color: var(--bg-dark);
@@ -36,14 +33,6 @@
             cursor: pointer;
             border-radius: 50%;
         }
-        .slider-thumb::-moz-range-thumb {
-            width: 16px;
-            height: 16px;
-            background: var(--primary-color);
-            cursor: pointer;
-            border-radius: 50%;
-        }
-        /* Canvas Layering */
         .waveform-container {
             position: relative;
             height: 120px;
@@ -59,7 +48,7 @@
             height: 100%;
         }
         #progress-bar {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.5);
             height: 100%;
             width: 2px;
             position: absolute;
@@ -68,63 +57,66 @@
             z-index: 10;
             pointer-events: none;
         }
-        /* Loading Overlay */
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- Error Modal for File Protocol -->
+    <div id="env-error" class="hidden fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
+        <div class="bg-red-900/80 border border-red-500 p-6 rounded-lg max-w-2xl text-white">
+            <h2 class="text-2xl font-bold mb-4"><i class="fa-solid fa-triangle-exclamation"></i> 動作環境エラー</h2>
+            <p class="mb-4">このアプリはブラウザのセキュリティ制限（SharedArrayBuffer）のため、<br>
+            <span class="font-bold text-yellow-300">ローカルファイル（file://）として直接開くと動作しません。</span></p>
+            
+            <p class="mb-2 font-bold">解決策：</p>
+            <ul class="list-disc list-inside space-y-2 ml-4">
+                <li>GitHub Pages にアップロードしてアクセスする</li>
+                <li>VS Code の "Live Server" などを使って http://localhost... でアクセスする</li>
+            </ul>
+            <button onclick="location.reload()" class="mt-6 bg-white text-red-900 px-4 py-2 rounded font-bold hover:bg-gray-200">ページを再読み込み</button>
+        </div>
+    </div>
 
     <!-- Header -->
     <header class="bg-slate-800 border-b border-slate-700 p-4 flex justify-between items-center shadow-lg z-20">
         <div class="flex items-center gap-3">
             <i class="fa-solid fa-scissors text-blue-500 text-2xl"></i>
-            <h1 class="text-xl font-bold text-white">Silence Cutter Pro <span class="text-xs font-normal text-gray-400 ml-2">Client-side Processing</span></h1>
+            <h1 class="text-xl font-bold text-white">Silence Cutter Pro <span class="text-xs font-normal text-gray-400 ml-2">v1.1 Fixed</span></h1>
         </div>
         <div class="flex gap-2">
-            <button id="btn-load-ffmpeg" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-gray-300 transition">
-                <i class="fa-solid fa-server mr-1"></i> System Status
-            </button>
+            <div id="system-status" class="text-xs bg-slate-700 px-3 py-1 rounded text-gray-300 flex items-center gap-2">
+                <i class="fa-solid fa-spinner fa-spin"></i> System Initializing...
+            </div>
         </div>
     </header>
 
     <!-- Main Content -->
     <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
         
-        <!-- Left Panel: Viewer & Timeline -->
+        <!-- Left Panel -->
         <div class="flex-1 flex flex-col p-4 gap-4 overflow-y-auto relative">
             
-            <!-- File Drop Zone -->
+            <!-- Drop Zone -->
             <div id="drop-zone" class="border-2 border-dashed border-slate-600 rounded-lg h-32 flex flex-col items-center justify-center bg-slate-800/50 hover:bg-slate-800 hover:border-blue-500 transition cursor-pointer">
                 <i class="fa-solid fa-cloud-arrow-up text-3xl text-gray-400 mb-2"></i>
-                <p class="text-gray-300 font-medium">動画ファイルをドラッグ＆ドロップ</p>
-                <p class="text-gray-500 text-sm mt-1">対応形式: .mp4, .mov (iPad/iPhone対応)</p>
+                <p class="text-gray-300 font-medium">動画ファイルをここにドロップ</p>
+                <p class="text-gray-500 text-sm mt-1">.mp4, .mov 対応</p>
                 <input type="file" id="file-input" class="hidden" accept="video/mp4,video/quicktime,video/x-m4v">
             </div>
 
-            <!-- Video Player -->
+            <!-- Player -->
             <div class="aspect-video bg-black rounded-lg shadow-2xl flex items-center justify-center overflow-hidden relative group">
                 <video id="main-video" class="w-full h-full object-contain" playsinline></video>
                 <div id="video-placeholder" class="absolute text-gray-600 flex flex-col items-center">
                     <i class="fa-solid fa-film text-6xl mb-4"></i>
-                    <span>No Video Loaded</span>
+                    <span>No Video</span>
                 </div>
             </div>
 
-            <!-- Waveform Visualization -->
+            <!-- Visualization -->
             <div class="bg-slate-800 p-3 rounded-lg shadow-md flex flex-col gap-2">
                 <div class="flex justify-between text-xs text-gray-400">
-                    <span>Waveform & Cuts</span>
+                    <span>Waveform & Cuts (Red=Cut, Green=Keep)</span>
                     <span id="time-display">00:00 / 00:00</span>
                 </div>
                 <div class="waveform-container cursor-crosshair" id="waveform-wrapper">
@@ -132,10 +124,10 @@
                     <div id="progress-bar"></div>
                 </div>
                 <div class="flex justify-center gap-4 mt-2">
-                    <button id="btn-play" class="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-500 flex items-center justify-center text-white shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button id="btn-play" disabled class="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-500 flex items-center justify-center text-white shadow-lg transition disabled:opacity-30 disabled:cursor-not-allowed">
                         <i class="fa-solid fa-play"></i>
                     </button>
-                    <button id="btn-stop" class="w-12 h-12 rounded-full bg-slate-600 hover:bg-slate-500 flex items-center justify-center text-white shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button id="btn-stop" disabled class="w-12 h-12 rounded-full bg-slate-600 hover:bg-slate-500 flex items-center justify-center text-white shadow-lg transition disabled:opacity-30 disabled:cursor-not-allowed">
                         <i class="fa-solid fa-stop"></i>
                     </button>
                 </div>
@@ -145,54 +137,44 @@
         <!-- Right Panel: Settings -->
         <div class="w-full lg:w-96 bg-slate-800 border-l border-slate-700 flex flex-col shadow-xl z-10">
             <div class="p-4 border-b border-slate-700 bg-slate-900/50">
-                <h2 class="font-semibold text-lg text-white"><i class="fa-solid fa-sliders mr-2 text-blue-400"></i>パラメータ設定</h2>
+                <h2 class="font-semibold text-lg text-white">設定</h2>
             </div>
 
             <div class="flex-1 p-6 flex flex-col gap-8 overflow-y-auto">
-                
-                <!-- Threshold Control -->
+                <!-- Controls -->
                 <div class="control-group">
                     <div class="flex justify-between mb-2">
-                        <label class="text-sm font-medium text-gray-300">無音しきい値 (dB)</label>
+                        <label class="text-sm font-medium text-gray-300">無音しきい値</label>
                         <span id="val-threshold" class="text-sm font-mono text-blue-400">-30 dB</span>
                     </div>
                     <input type="range" id="input-threshold" min="-60" max="0" value="-30" class="w-full h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer slider-thumb">
-                    <p class="text-xs text-gray-500 mt-1">この値より小さい音量をカットします。</p>
                 </div>
 
-                <!-- Min Duration Control -->
                 <div class="control-group">
                     <div class="flex justify-between mb-2">
-                        <label class="text-sm font-medium text-gray-300">最小無音期間 (秒)</label>
+                        <label class="text-sm font-medium text-gray-300">最小無音期間</label>
                         <span id="val-duration" class="text-sm font-mono text-blue-400">0.5 s</span>
                     </div>
                     <input type="range" id="input-duration" min="0.1" max="2.0" step="0.1" value="0.5" class="w-full h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer slider-thumb">
-                    <p class="text-xs text-gray-500 mt-1">これより短い無音は無視します。</p>
                 </div>
 
-                <!-- Padding Control -->
                 <div class="control-group">
                     <div class="flex justify-between mb-2">
-                        <label class="text-sm font-medium text-gray-300">パディング (秒)</label>
+                        <label class="text-sm font-medium text-gray-300">パディング(余韻)</label>
                         <span id="val-padding" class="text-sm font-mono text-blue-400">0.2 s</span>
                     </div>
                     <input type="range" id="input-padding" min="0.0" max="1.0" step="0.05" value="0.2" class="w-full h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer slider-thumb">
-                    <p class="text-xs text-gray-500 mt-1">カット前後の余韻を少し残します。</p>
                 </div>
 
-                <!-- Analysis Info -->
+                <!-- Stats -->
                 <div class="bg-slate-700/50 rounded p-4 text-sm space-y-2 border border-slate-600">
                     <div class="flex justify-between">
                         <span class="text-gray-400">元の長さ:</span>
                         <span id="stat-original" class="font-mono text-white">00:00</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-gray-400">カット後の長さ:</span>
+                        <span class="text-gray-400">カット後(予測):</span>
                         <span id="stat-estimated" class="font-mono text-green-400">00:00</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-400">削減率:</span>
-                        <span id="stat-ratio" class="font-mono text-blue-400">0%</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-400">カット数:</span>
@@ -201,21 +183,26 @@
                 </div>
             </div>
 
-            <!-- Actions -->
+            <!-- Action -->
             <div class="p-4 border-t border-slate-700 bg-slate-900">
-                <button id="btn-export" class="w-full py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded shadow-lg flex items-center justify-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                    <i class="fa-solid fa-file-export"></i> 動画を書き出し (FFmpeg)
+                <button id="btn-export" disabled class="w-full py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded shadow-lg flex items-center justify-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-file-export"></i> 動画書き出し (FFmpeg)
                 </button>
-                <p id="export-status" class="text-xs text-center text-gray-500 mt-2 min-h-[1.5em]">準備完了</p>
+                <p id="export-status" class="text-xs text-center text-gray-500 mt-2 min-h-[1.5em]">ファイルを選択してください</p>
             </div>
         </div>
     </main>
 
-    <!-- COI Service Worker Setup Script (Inline) -->
+    <!-- COI Service Worker (Inject headers for SharedArrayBuffer) -->
     <script>
-        /*! coi-serviceworker v0.1.7 - MIT License */
-        // This hack allows SharedArrayBuffer on GitHub Pages without server config
-        if(window.crossOriginIsolated===false){const e=document.createElement("script");e.src=window.URL.createObjectURL(new Blob([`
+        // 環境チェック
+        if (window.location.protocol === 'file:') {
+            document.getElementById('env-error').classList.remove('hidden');
+            throw new Error("File protocol detected. Application stopped.");
+        }
+
+        // COI Service Worker Hack
+        const coiScript = `
             self.addEventListener("install", () => self.skipWaiting());
             self.addEventListener("activate", e => e.waitUntil(self.clients.claim()));
             self.addEventListener("fetch", function(e) {
@@ -226,53 +213,53 @@
                     headers.set("Cross-Origin-Embedder-Policy", "require-corp");
                     headers.set("Cross-Origin-Opener-Policy", "same-origin");
                     return new Response(r.body, { status: r.status, statusText: r.statusText, headers });
-                }).catch(e => console.error(e)));
+                }));
             });
-        `],{type:"text/javascript"}));document.head.appendChild(e);
-        if("serviceWorker"in navigator)navigator.serviceWorker.register(e.src).then(r=>console.log("COI-SW Registered")).catch(e=>console.error("COI-SW Failed",e));
-        else window.location.reload()}
+        `;
+
+        if (window.crossOriginIsolated === false) {
+            const blob = new Blob([coiScript], { type: 'application/javascript' });
+            const url = URL.createObjectURL(blob);
+            
+            if ("serviceWorker" in navigator) {
+                navigator.serviceWorker.register(url)
+                    .then(reg => {
+                        console.log("COI Worker Registered. Reloading...");
+                        window.location.reload();
+                    })
+                    .catch(err => console.error("COI Worker Failed:", err));
+            }
+        }
     </script>
 
     <!-- Application Logic -->
     <script>
-        /**
-         * Silence Cutter Pro - Core Application Logic
-         * Designed for high performance and modularity.
-         */
-
-        // --- Constants & State ---
-        const CONSTANTS = {
-            FFMPEG_CORE_URL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.6/dist/ffmpeg-core.js',
-            SAMPLE_RATE: 44100,
-            FFT_SIZE: 2048,
-            CANVAS_DENSITY: 2 // For retina displays
-        };
-
+        // Config
+        const CORE_URL = 'https://unpkg.com/@ffmpeg/core@0.11.6/dist/ffmpeg-core.js';
+        
         const STATE = {
             ffmpeg: null,
             file: null,
             audioBuffer: null,
             videoDuration: 0,
-            segments: [], // Array of { start, end, keep }
-            settings: {
-                threshold: -30, // dB
-                minDuration: 0.5, // seconds
-                padding: 0.2 // seconds
-            },
+            segments: [],
+            settings: { threshold: -30, minDuration: 0.5, padding: 0.2 },
             isPlaying: false,
             isProcessing: false,
-            animationFrameId: null
+            animationId: null
         };
 
-        // --- Elements ---
         const UI = {
             dropZone: document.getElementById('drop-zone'),
             fileInput: document.getElementById('file-input'),
             video: document.getElementById('main-video'),
-            videoPlaceholder: document.getElementById('video-placeholder'),
             canvas: document.getElementById('wave-canvas'),
             progressBar: document.getElementById('progress-bar'),
-            timeDisplay: document.getElementById('time-display'),
+            status: document.getElementById('system-status'),
+            exportStatus: document.getElementById('export-status'),
+            btnPlay: document.getElementById('btn-play'),
+            btnStop: document.getElementById('btn-stop'),
+            btnExport: document.getElementById('btn-export'),
             inputs: {
                 threshold: document.getElementById('input-threshold'),
                 duration: document.getElementById('input-duration'),
@@ -286,497 +273,383 @@
             stats: {
                 original: document.getElementById('stat-original'),
                 estimated: document.getElementById('stat-estimated'),
-                ratio: document.getElementById('stat-ratio'),
                 cuts: document.getElementById('stat-cuts')
-            },
-            buttons: {
-                play: document.getElementById('btn-play'),
-                stop: document.getElementById('btn-stop'),
-                export: document.getElementById('btn-export')
-            },
-            exportStatus: document.getElementById('export-status')
+            }
         };
 
-        // --- 1. Audio Analysis Service ---
-        class AudioService {
+        // --- Services ---
+
+        class FFmpegManager {
             constructor() {
-                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            }
-
-            async extractAudioBuffer(file) {
-                const arrayBuffer = await file.arrayBuffer();
-                return await this.audioContext.decodeAudioData(arrayBuffer);
-            }
-
-            /**
-             * Calculates RMS amplitude for chunks of audio
-             */
-            analyzeVolume(audioBuffer) {
-                const rawData = audioBuffer.getChannelData(0); // Use first channel
-                const sampleRate = audioBuffer.sampleRate;
-                const windowSize = Math.floor(sampleRate * 0.05); // 50ms windows
-                const volumes = [];
-
-                for (let i = 0; i < rawData.length; i += windowSize) {
-                    let sum = 0;
-                    const end = Math.min(i + windowSize, rawData.length);
-                    for (let j = i; j < end; j++) {
-                        sum += rawData[j] * rawData[j];
-                    }
-                    const rms = Math.sqrt(sum / (end - i));
-                    // Convert to dB
-                    const db = 20 * Math.log10(rms + 1e-10); // avoid log(0)
-                    volumes.push({
-                        time: i / sampleRate,
-                        db: db,
-                        rms: rms
-                    });
-                }
-                return volumes;
-            }
-        }
-
-        // --- 2. Segmentation Logic ---
-        class SegmentProcessor {
-            static calculateSegments(volumeData, settings, totalDuration) {
-                const { threshold, minDuration, padding } = settings;
-                const rawSegments = [];
-                let isSilent = true;
-                let startTime = 0;
-
-                // 1. Identify raw silence/sound blocks
-                for (let i = 0; i < volumeData.length; i++) {
-                    const currentIsSilent = volumeData[i].db < threshold;
-                    const currentTime = volumeData[i].time;
-
-                    if (isSilent !== currentIsSilent) {
-                        // Status changed
-                        rawSegments.push({
-                            start: startTime,
-                            end: currentTime,
-                            isSilent: isSilent
-                        });
-                        startTime = currentTime;
-                        isSilent = currentIsSilent;
-                    }
-                }
-                // Add last segment
-                rawSegments.push({
-                    start: startTime,
-                    end: totalDuration,
-                    isSilent: isSilent
-                });
-
-                // 2. Filter short silences (if silence < minDuration, treat as sound)
-                // Also applies logic to ignore extremely short sound bursts if needed (omitted for now)
-                const mergedSegments = [];
-                for (let seg of rawSegments) {
-                    if (seg.isSilent && (seg.end - seg.start) < minDuration) {
-                        seg.isSilent = false; // Treat as sound
-                    }
-                    
-                    // Merge with previous if same type
-                    if (mergedSegments.length > 0 && mergedSegments[mergedSegments.length - 1].isSilent === seg.isSilent) {
-                        mergedSegments[mergedSegments.length - 1].end = seg.end;
-                    } else {
-                        mergedSegments.push(seg);
-                    }
-                }
-
-                // 3. Apply Padding
-                // Extend 'sound' segments into 'silence' segments by padding amount
-                const paddedSegments = [];
-                for (let i = 0; i < mergedSegments.length; i++) {
-                    let seg = { ...mergedSegments[i] };
-                    
-                    if (!seg.isSilent) {
-                        // It's sound, expand it
-                        seg.start = Math.max(0, seg.start - padding);
-                        seg.end = Math.min(totalDuration, seg.end + padding);
-                    }
-                    paddedSegments.push(seg);
-                }
-
-                // 4. Final Cleanup & Inversion (We need list of KEEPS)
-                // Since padded segments might overlap, we need to flatten the time ranges.
-                // Simplest way: Construct a "Keep Mask" logic?
-                // Better: Just iterate and merge overlapping "Keep" regions.
-                
-                let keepSegments = [];
-                for (let seg of paddedSegments) {
-                    if (!seg.isSilent) {
-                        // Try to merge with last keep segment
-                        if (keepSegments.length > 0) {
-                            const last = keepSegments[keepSegments.length - 1];
-                            if (seg.start <= last.end) {
-                                last.end = Math.max(last.end, seg.end);
-                            } else {
-                                keepSegments.push(seg);
-                            }
-                        } else {
-                            keepSegments.push(seg);
-                        }
-                    }
-                }
-
-                return keepSegments; // These are the parts to PLAY
-            }
-        }
-
-        // --- 3. Visualization Service ---
-        class Visualizer {
-            constructor(canvas) {
-                this.canvas = canvas;
-                this.ctx = canvas.getContext('2d');
-                this.resize();
-                window.addEventListener('resize', () => this.resize());
-            }
-
-            resize() {
-                const rect = this.canvas.parentElement.getBoundingClientRect();
-                this.canvas.width = rect.width * CONSTANTS.CANVAS_DENSITY;
-                this.canvas.height = rect.height * CONSTANTS.CANVAS_DENSITY;
-                this.width = rect.width;
-                this.height = rect.height;
-                this.ctx.scale(CONSTANTS.CANVAS_DENSITY, CONSTANTS.CANVAS_DENSITY);
-            }
-
-            draw(volumeData, keepSegments, currentVideoTime) {
-                const ctx = this.ctx;
-                const w = this.width;
-                const h = this.height;
-                const totalTime = STATE.videoDuration || 1;
-
-                // Clear
-                ctx.clearRect(0, 0, w, h);
-                ctx.fillStyle = '#1e293b';
-                ctx.fillRect(0, 0, w, h);
-
-                if (!volumeData || volumeData.length === 0) return;
-
-                // Draw Background (Red for Silence / Cut)
-                ctx.fillStyle = 'rgba(239, 68, 68, 0.3)'; // Red
-                ctx.fillRect(0, 0, w, h);
-
-                // Draw Keep Segments (Green background)
-                ctx.fillStyle = 'rgba(34, 197, 94, 0.2)'; // Green
-                keepSegments.forEach(seg => {
-                    const x = (seg.start / totalTime) * w;
-                    const gw = ((seg.end - seg.start) / totalTime) * w;
-                    ctx.fillRect(x, 0, gw, h);
-                });
-
-                // Draw Waveform
-                ctx.beginPath();
-                ctx.strokeStyle = '#94a3b8';
-                ctx.lineWidth = 1;
-                
-                const barWidth = w / volumeData.length;
-                
-                // Optimization: Don't draw every point if too dense
-                const step = Math.max(1, Math.floor(volumeData.length / w)); 
-
-                ctx.beginPath();
-                for (let i = 0; i < volumeData.length; i += step) {
-                    const x = (volumeData[i].time / totalTime) * w;
-                    // Normalize dB -60 to 0 -> 0 to 1 height
-                    let nHeight = (volumeData[i].db + 60) / 60;
-                    if (nHeight < 0) nHeight = 0;
-                    if (nHeight > 1) nHeight = 1;
-                    
-                    const y = h - (nHeight * h);
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                }
-                ctx.stroke();
-
-                // Update Progress Bar position DOM (more performant than canvas redraw for just a line)
-                if (UI.progressBar) {
-                    const pct = (currentVideoTime / totalTime) * 100;
-                    UI.progressBar.style.left = `${pct}%`;
-                }
-            }
-        }
-
-        // --- 4. FFmpeg Service ---
-        class FFmpegService {
-            constructor() {
-                this.ffmpeg = FFmpeg.createFFmpeg({
-                    log: true,
-                    corePath: CONSTANTS.FFMPEG_CORE_URL
-                });
                 this.loaded = false;
+                // FFmpeg v0.11.x
+                this.instance = FFmpeg.createFFmpeg({
+                    log: true,
+                    corePath: CORE_URL
+                });
             }
 
             async load() {
-                if (this.loaded) return;
+                if (this.loaded) return true;
                 try {
-                    await this.ffmpeg.load();
+                    await this.instance.load();
                     this.loaded = true;
-                    console.log("FFmpeg loaded");
-                    document.getElementById('btn-load-ffmpeg').innerHTML = '<i class="fa-solid fa-check text-green-400"></i> System Ready';
+                    UI.status.innerHTML = '<i class="fa-solid fa-check text-green-400"></i> System Ready';
+                    return true;
                 } catch (e) {
                     console.error(e);
-                    document.getElementById('btn-load-ffmpeg').innerHTML = '<i class="fa-solid fa-triangle-exclamation text-red-400"></i> Error';
-                    alert("FFmpegのロードに失敗しました。ブラウザがSharedArrayBufferに対応していない可能性があります。");
+                    UI.status.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-red-400"></i> Load Failed';
+                    
+                    // SharedArrayBuffer エラーの場合
+                    if(!window.crossOriginIsolated) {
+                        alert("エラー: ブラウザのセキュリティ機能(SharedArrayBuffer)が無効です。HTTPSサイトかlocalhostで実行してください。");
+                    }
+                    return false;
                 }
             }
 
-            async processVideo(file, segments, progressCallback) {
+            async process(file, segments) {
                 if (!this.loaded) await this.load();
-                const { name } = file;
                 
-                this.ffmpeg.FS('writeFile', 'input.mp4', await FFmpeg.fetchFile(file));
+                const inputName = 'input.mp4';
+                const outputName = 'output.mp4';
 
-                // Build complex filter
-                // strategy: use 'select' filter to keep frames? Or trim/concat.
-                // trim/concat is more precise for audio/video sync but command is long.
-                // select='between(t,s,e)+between(t,s2,e2)...'
-                // For audio: aselect='...'
-                
-                // Generate Filter String
-                const videoSelects = segments.map(s => `between(t,${s.start},${s.end})`).join('+');
-                const audioSelects = segments.map(s => `between(t,${s.start},${s.end})`).join('+');
+                // Write File
+                this.instance.FS('writeFile', inputName, await FFmpeg.fetchFile(file));
 
-                if(videoSelects.length === 0) {
-                    throw new Error("残る部分がありません。");
-                }
-
-                // Note: select filter keeps timestamps, so we need 'setpts=N/FRAME_RATE/TB' and 'asetpts=N/SR/TB' to squeeze them together.
-                // Actually, setpts=PTS-STARTPTS doesn't squeeze. 
-                // Correct approach for cuts: trim -> setpts -> concat. But huge command.
-                // Better approach for select: "select='...',setpts=N/FRAME_RATE/TB" works if using N (number of selected frames).
-                
-                // Let's use the robust `segment` approach is too complex for single file.
-                // We will use the `select` filter approach which is fastest for preview-like renders, 
-                // but `setpts=N/FRAME_RATE/TB` is tricky with VFR.
-                // Let's use the standard trim-concat filter generator. It handles AV sync best.
-                
-                let filterComplex = "";
+                // Build Filter Complex
+                // Use trim+concat approach for reliability
+                let filter = "";
                 let inputs = "";
                 
-                // Warning: If too many segments, command line limit might be hit.
-                // For a demo, we limit to chunks or warn.
-                if (segments.length > 100) {
-                   if(!confirm("カット数が多すぎます(100箇所以上)。処理に時間がかかるか、失敗する可能性があります。続行しますか？")) return;
+                // Warning for too many segments
+                if (segments.length > 150) {
+                    if(!confirm(`カット数が ${segments.length} 箇所あります。処理に時間がかかる可能性があります。続行しますか？`)) {
+                        throw new Error("Cancelled by user");
+                    }
                 }
 
                 segments.forEach((seg, i) => {
-                    // Video trim
-                    filterComplex += `[0:v]trim=start=${seg.start}:end=${seg.end},setpts=PTS-STARTPTS[v${i}];`;
-                    // Audio trim
-                    filterComplex += `[0:a]atrim=start=${seg.start}:end=${seg.end},asetpts=PTS-STARTPTS[a${i}];`;
-                });
-
-                segments.forEach((_, i) => {
+                    filter += `[0:v]trim=start=${seg.start}:end=${seg.end},setpts=PTS-STARTPTS[v${i}];`;
+                    filter += `[0:a]atrim=start=${seg.start}:end=${seg.end},asetpts=PTS-STARTPTS[a${i}];`;
                     inputs += `[v${i}][a${i}]`;
                 });
-                
-                filterComplex += `${inputs}concat=n=${segments.length}:v=1:a=1[outv][outa]`;
+                filter += `${inputs}concat=n=${segments.length}:v=1:a=1[outv][outa]`;
 
-                const command = [
-                    '-i', 'input.mp4',
-                    '-filter_complex', filterComplex,
+                // Run FFmpeg
+                const args = [
+                    '-i', inputName,
+                    '-filter_complex', filter,
                     '-map', '[outv]', '-map', '[outa]',
-                    '-c:v', 'libx264', // Re-encode needed for frame accuracy
-                    '-preset', 'superfast', // Speed over size
+                    '-c:v', 'libx264',
+                    '-preset', 'ultrafast', // Speed priority
                     '-c:a', 'aac',
-                    'output.mp4'
+                    outputName
                 ];
 
-                UI.exportStatus.innerText = "エンコード中... (ブラウザを閉じないでください)";
-                
-                await this.ffmpeg.run(...command);
+                await this.instance.run(...args);
 
-                const data = this.ffmpeg.FS('readFile', 'output.mp4');
+                // Read Output
+                const data = this.instance.FS('readFile', outputName);
                 
                 // Cleanup
                 try {
-                    this.ffmpeg.FS('unlink', 'input.mp4');
-                    this.ffmpeg.FS('unlink', 'output.mp4');
+                    this.instance.FS('unlink', inputName);
+                    this.instance.FS('unlink', outputName);
                 } catch(e){}
 
                 return new Blob([data.buffer], { type: 'video/mp4' });
             }
         }
 
-        // --- 5. Main Controller ---
-        const audioService = new AudioService();
-        const visualizer = new Visualizer(UI.canvas);
-        const ffmpegService = new FFmpegService();
-        let volumeData = [];
+        const ffmpegManager = new FFmpegManager();
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        // Initialize
-        (async () => {
-            // Preload ffmpeg if possible (idle)
-            setTimeout(() => ffmpegService.load(), 1000);
-        })();
+        // --- Core Logic ---
+
+        async function handleFile(file) {
+            try {
+                UI.exportStatus.innerText = "解析中...";
+                UI.btnExport.disabled = true;
+                UI.btnPlay.disabled = true;
+
+                STATE.file = file;
+                UI.video.src = URL.createObjectURL(file);
+                
+                // 1. Get Duration
+                await new Promise(r => UI.video.onloadedmetadata = r);
+                STATE.videoDuration = UI.video.duration;
+
+                // 2. Decode Audio
+                const arrayBuffer = await file.arrayBuffer();
+                try {
+                    STATE.audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                } catch (err) {
+                    throw new Error("音声データのデコードに失敗しました。ファイル形式を確認してください。");
+                }
+
+                // 3. Analyze
+                STATE.volumeData = analyzeAudio(STATE.audioBuffer);
+                
+                // 4. Ready
+                updateSegments();
+                UI.btnPlay.disabled = false;
+                UI.btnStop.disabled = false;
+                UI.btnExport.disabled = false;
+                UI.exportStatus.innerText = "準備完了";
+                
+                // Start ffmpeg load in background
+                ffmpegManager.load();
+
+            } catch (e) {
+                console.error(e);
+                alert("読み込みエラー: " + e.message);
+                UI.exportStatus.innerText = "エラー";
+            }
+        }
+
+        function analyzeAudio(buffer) {
+            const raw = buffer.getChannelData(0);
+            const sampleRate = buffer.sampleRate;
+            const winSize = Math.floor(sampleRate * 0.05); // 50ms
+            const data = [];
+            
+            for (let i = 0; i < raw.length; i += winSize) {
+                let sum = 0;
+                const end = Math.min(i + winSize, raw.length);
+                for (let j = i; j < end; j++) sum += raw[j] * raw[j];
+                const rms = Math.sqrt(sum / (end - i));
+                const db = 20 * Math.log10(rms + 1e-10);
+                data.push({ time: i / sampleRate, db });
+            }
+            return data;
+        }
+
+        function updateSegments() {
+            if (!STATE.volumeData) return;
+            
+            const { threshold, minDuration, padding } = STATE.settings;
+            
+            // 1. Detect Silence
+            let isSilence = true;
+            let start = 0;
+            const rawSegs = []; // {start, end, isSilence}
+
+            STATE.volumeData.forEach(p => {
+                const nowSilent = p.db < threshold;
+                if (nowSilent !== isSilence) {
+                    rawSegs.push({ start, end: p.time, isSilence });
+                    start = p.time;
+                    isSilence = nowSilent;
+                }
+            });
+            rawSegs.push({ start, end: STATE.videoDuration, isSilence });
+
+            // 2. Logic: Keep non-silence + padding
+            // Simply: Identify "Keep" regions
+            let keepRegions = [];
+            
+            rawSegs.forEach(seg => {
+                if (!seg.isSilence) {
+                    // Sound detected
+                    keepRegions.push({ 
+                        start: Math.max(0, seg.start - padding), 
+                        end: Math.min(STATE.videoDuration, seg.end + padding) 
+                    });
+                } else {
+                    // It is silence. Check if it's too short (noise?)
+                    const dur = seg.end - seg.start;
+                    if (dur < minDuration) {
+                        // Treat short silence as sound (bridge it)
+                        keepRegions.push({ start: seg.start, end: seg.end });
+                    }
+                }
+            });
+
+            // 3. Merge overlapping regions
+            keepRegions.sort((a, b) => a.start - b.start);
+            const merged = [];
+            if (keepRegions.length > 0) {
+                let curr = keepRegions[0];
+                for (let i = 1; i < keepRegions.length; i++) {
+                    if (keepRegions[i].start <= curr.end) {
+                        curr.end = Math.max(curr.end, keepRegions[i].end);
+                    } else {
+                        merged.push(curr);
+                        curr = keepRegions[i];
+                    }
+                }
+                merged.push(curr);
+            }
+
+            STATE.segments = merged;
+            drawWaveform();
+            updateStats();
+        }
+
+        function updateStats() {
+            const keepTotal = STATE.segments.reduce((sum, s) => sum + (s.end - s.start), 0);
+            UI.stats.original.innerText = STATE.videoDuration.toFixed(1) + "s";
+            UI.stats.estimated.innerText = keepTotal.toFixed(1) + "s";
+            UI.stats.cuts.innerText = STATE.segments.length;
+        }
+
+        // --- Visualization ---
+        function drawWaveform() {
+            const canvas = UI.canvas;
+            const ctx = canvas.getContext('2d');
+            const { width, height } = canvas.parentElement.getBoundingClientRect();
+            
+            // Resize if needed
+            if (canvas.width !== width) {
+                canvas.width = width;
+                canvas.height = height;
+            }
+
+            ctx.clearRect(0, 0, width, height);
+            
+            // BG
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw Red (Cut) areas by default
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw Green (Keep) areas
+            ctx.fillStyle = 'rgba(34, 197, 94, 0.3)';
+            STATE.segments.forEach(s => {
+                const x = (s.start / STATE.videoDuration) * width;
+                const w = ((s.end - s.start) / STATE.videoDuration) * width;
+                ctx.fillRect(x, 0, w, height);
+            });
+
+            // Waveform
+            ctx.beginPath();
+            ctx.strokeStyle = '#94a3b8';
+            
+            const step = Math.ceil(STATE.volumeData.length / width);
+            for (let i = 0; i < STATE.volumeData.length; i += step) {
+                const p = STATE.volumeData[i];
+                const x = (p.time / STATE.videoDuration) * width;
+                const normDb = (p.db + 60) / 60; // -60..0 -> 0..1
+                const h = Math.max(0, normDb * height);
+                const y = height - h;
+                
+                if(i===0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+
+        function animate() {
+            if (!UI.video.paused) {
+                const t = UI.video.currentTime;
+                const width = UI.canvas.width;
+                
+                // Progress Bar
+                const x = (t / STATE.videoDuration) * 100;
+                UI.progressBar.style.left = `${x}%`;
+                UI.canvas.parentElement.querySelector('#time-display').innerText = 
+                    `${t.toFixed(1)} / ${STATE.videoDuration.toFixed(1)}`;
+
+                // Skip Silence Logic
+                const inSegment = STATE.segments.some(s => t >= s.start && t < s.end);
+                if (!inSegment) {
+                    const next = STATE.segments.find(s => s.start > t);
+                    if (next) {
+                        UI.video.currentTime = next.start;
+                    } else if (STATE.segments.length > 0 && t > STATE.segments[STATE.segments.length-1].end) {
+                        // End
+                        stop();
+                    }
+                }
+                STATE.animationId = requestAnimationFrame(animate);
+            }
+        }
+
+        function stop() {
+            UI.video.pause();
+            UI.btnPlay.innerHTML = '<i class="fa-solid fa-play"></i>';
+            cancelAnimationFrame(STATE.animationId);
+        }
 
         // --- Event Listeners ---
 
+        UI.dropZone.onclick = () => UI.fileInput.click();
+        UI.fileInput.onchange = e => e.target.files[0] && handleFile(e.target.files[0]);
+        
         // Drag & Drop
-        UI.dropZone.addEventListener('dragover', e => {
+        UI.dropZone.ondragover = e => { e.preventDefault(); UI.dropZone.classList.add('border-blue-500'); };
+        UI.dropZone.ondragleave = e => { e.preventDefault(); UI.dropZone.classList.remove('border-blue-500'); };
+        UI.dropZone.ondrop = e => {
             e.preventDefault();
-            UI.dropZone.classList.add('border-blue-500', 'bg-slate-800');
-        });
-        UI.dropZone.addEventListener('dragleave', e => {
-            e.preventDefault();
-            UI.dropZone.classList.remove('border-blue-500', 'bg-slate-800');
-        });
-        UI.dropZone.addEventListener('drop', e => {
-            e.preventDefault();
-            UI.dropZone.classList.remove('border-blue-500', 'bg-slate-800');
-            if (e.dataTransfer.files.length) loadFile(e.dataTransfer.files[0]);
-        });
-        UI.dropZone.addEventListener('click', () => UI.fileInput.click());
-        UI.fileInput.addEventListener('change', e => {
-            if (e.target.files.length) loadFile(e.target.files[0]);
+            UI.dropZone.classList.remove('border-blue-500');
+            if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+        };
+
+        // Sliders
+        Object.keys(UI.inputs).forEach(k => {
+            UI.inputs[k].oninput = e => {
+                STATE.settings[k] = parseFloat(e.target.value);
+                UI.vals[k].innerText = STATE.settings[k] + (k==='threshold'?' dB':' s');
+                updateSegments();
+            };
         });
 
-        async function loadFile(file) {
-            UI.exportStatus.innerText = "解析中...";
-            UI.buttons.export.disabled = true;
-            UI.videoPlaceholder.classList.add('hidden');
-
-            STATE.file = file;
-            const url = URL.createObjectURL(file);
-            UI.video.src = url;
-
-            // Wait for metadata to get duration
-            await new Promise(r => UI.video.onloadedmetadata = r);
-            STATE.videoDuration = UI.video.duration;
-            
-            // Decode Audio
-            const buffer = await audioService.extractAudioBuffer(file);
-            STATE.audioBuffer = buffer;
-            
-            // Analyze Volume
-            volumeData = audioService.analyzeVolume(buffer);
-            
-            UI.buttons.play.disabled = false;
-            UI.buttons.stop.disabled = false;
-            UI.buttons.export.disabled = false;
-            UI.exportStatus.innerText = "準備完了";
-
-            updateCalculation();
-        }
-
-        // Controls Changes
-        Object.keys(UI.inputs).forEach(key => {
-            UI.inputs[key].addEventListener('input', (e) => {
-                STATE.settings[key] = parseFloat(e.target.value);
-                UI.vals[key].innerText = STATE.settings[key] + (key === 'threshold' ? ' dB' : ' s');
-                updateCalculation();
-            });
-        });
-
-        function updateCalculation() {
-            if (!volumeData.length) return;
-
-            STATE.segments = SegmentProcessor.calculateSegments(volumeData, STATE.settings, STATE.videoDuration);
-            
-            // Update Stats
-            const keepDuration = STATE.segments.reduce((acc, seg) => acc + (seg.end - seg.start), 0);
-            const ratio = ((1 - (keepDuration / STATE.videoDuration)) * 100).toFixed(1);
-            
-            UI.stats.original.innerText = formatTime(STATE.videoDuration);
-            UI.stats.estimated.innerText = formatTime(keepDuration);
-            UI.stats.ratio.innerText = ratio + '%';
-            UI.stats.cuts.innerText = STATE.segments.length;
-
-            visualizer.draw(volumeData, STATE.segments, UI.video.currentTime);
-        }
-
-        // Playback Logic (The "Jump Cut" Preview)
-        UI.buttons.play.addEventListener('click', () => {
+        // Buttons
+        UI.btnPlay.onclick = () => {
             if (UI.video.paused) {
                 UI.video.play();
                 animate();
-                UI.buttons.play.innerHTML = '<i class="fa-solid fa-pause"></i>';
+                UI.btnPlay.innerHTML = '<i class="fa-solid fa-pause"></i>';
             } else {
-                UI.video.pause();
-                cancelAnimationFrame(STATE.animationFrameId);
-                UI.buttons.play.innerHTML = '<i class="fa-solid fa-play"></i>';
+                stop();
             }
-        });
-
-        UI.buttons.stop.addEventListener('click', () => {
-            UI.video.pause();
+        };
+        
+        UI.btnStop.onclick = () => {
+            stop();
             UI.video.currentTime = 0;
-            cancelAnimationFrame(STATE.animationFrameId);
-            UI.buttons.play.innerHTML = '<i class="fa-solid fa-play"></i>';
-            visualizer.draw(volumeData, STATE.segments, 0);
-        });
+            drawWaveform(); // Reset progress visual
+            UI.progressBar.style.left = '0%';
+        };
 
-        // Sync Timeline Click
-        UI.canvas.addEventListener('click', (e) => {
-            if (!STATE.videoDuration) return;
+        UI.canvas.onclick = e => {
+            if(!STATE.videoDuration) return;
             const rect = UI.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const clickTime = (x / rect.width) * STATE.videoDuration;
-            UI.video.currentTime = clickTime;
-            visualizer.draw(volumeData, STATE.segments, clickTime);
-        });
+            const ratio = (e.clientX - rect.left) / rect.width;
+            UI.video.currentTime = ratio * STATE.videoDuration;
+            drawWaveform();
+            UI.progressBar.style.left = `${ratio*100}%`;
+        };
 
-        function animate() {
-            if (UI.video.paused) return;
-
-            const t = UI.video.currentTime;
-            
-            // Check if we are in a "Cut" zone (i.e., NOT in a keep segment)
-            const isInKeep = STATE.segments.some(seg => t >= seg.start && t < seg.end);
-            
-            if (!isInKeep) {
-                // Find next keep segment
-                const nextSeg = STATE.segments.find(seg => seg.start > t);
-                if (nextSeg) {
-                    UI.video.currentTime = nextSeg.start; // Jump!
-                } else {
-                    // End of video content
-                    if(STATE.segments.length > 0 && t > STATE.segments[STATE.segments.length-1].end){
-                        UI.video.pause();
-                        UI.buttons.play.innerHTML = '<i class="fa-solid fa-play"></i>';
-                    }
-                }
-            }
-
-            UI.timeDisplay.innerText = formatTime(t) + " / " + formatTime(STATE.videoDuration);
-            visualizer.draw(volumeData, STATE.segments, t);
-            STATE.animationFrameId = requestAnimationFrame(animate);
-        }
-
-        // Export
-        UI.buttons.export.addEventListener('click', async () => {
-            if (STATE.isProcessing) return;
+        UI.btnExport.onclick = async () => {
+            if(STATE.isProcessing) return;
             STATE.isProcessing = true;
-            UI.buttons.export.disabled = true;
-            
+            UI.btnExport.disabled = true;
+            UI.exportStatus.innerText = "エンコード中... (重い処理です)";
+
             try {
-                const blob = await ffmpegService.processVideo(STATE.file, STATE.segments);
+                const blob = await ffmpegManager.process(STATE.file, STATE.segments);
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'edited_' + STATE.file.name;
+                a.download = 'cut_' + STATE.file.name;
                 a.click();
-                UI.exportStatus.innerText = "書き出し完了！";
-            } catch (e) {
+                UI.exportStatus.innerText = "完了！";
+            } catch(e) {
                 console.error(e);
-                UI.exportStatus.innerText = "エラー: " + e.message;
-                alert("書き出し中にエラーが発生しました。コンソールを確認してください。");
+                UI.exportStatus.innerText = "エラー発生";
+                alert("書き出し失敗: " + e.message);
             } finally {
                 STATE.isProcessing = false;
-                UI.buttons.export.disabled = false;
+                UI.btnExport.disabled = false;
             }
-        });
+        };
 
-        // Utils
-        function formatTime(seconds) {
-            const m = Math.floor(seconds / 60);
-            const s = Math.floor(seconds % 60);
-            const ms = Math.floor((seconds % 1) * 10);
-            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms}`;
-        }
-
+        // Initialize
+        window.addEventListener('resize', drawWaveform);
     </script>
 </body>
 </html>
