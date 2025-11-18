@@ -1,265 +1,234 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <!-- PWA / アイコン関連 -->
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>無音区間オートカット Pro</title>
+  <title>無音区間オートカット Pro (JP)</title>
 
   <!-- ffmpeg.wasm (CDN) -->
   <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
 
-  <!-- Google Fonts (Inter / Noto Sans JP) -->
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-  <!-- Service Worker 登録 (COOP/COEP対策) -->
+  <!-- Service Worker (COOP/COEP) -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./coi-serviceworker.js').then(reg => {
-          console.log('COOP/COEP Service Worker registered');
-        }).catch(err => {});
+        navigator.serviceWorker.register('./coi-serviceworker.js').catch(e=>{});
       });
-      if (!window.crossOriginIsolated) {
-        console.warn("SharedArrayBuffer is not isolated.");
-      }
     }
   </script>
 
   <style>
     :root {
-      /* カラーパレット (ロゴから抽出・調整) */
-      --bg-deep: #05070a;
-      --bg-panel: rgba(20, 25, 35, 0.7);
-      --bg-card: rgba(30, 35, 45, 0.5);
+      /* 色設定: ロゴベース + ダークテーマ */
+      --bg-body: #0b0d11;
+      --bg-panel: #14181f;
+      --bg-input: #080a0d;
       
-      --primary: #8DC21F;      /* ロゴの明るい緑 */
-      --primary-glow: rgba(141, 194, 31, 0.4);
-      --accent: #C0CD7D;       /* ロゴの淡い緑 */
-      --secondary: #4aa3ff;    /* 機能的アクセント（青） */
+      --primary: #8DC21F;
+      --primary-hover: #a3db2e;
+      --accent: #4aa3ff;
       
-      --text-main: #f0f4f8;
-      --text-sub: #94a3b8;
-      --border: rgba(255, 255, 255, 0.08);
+      --text-main: #e2e8f0;
+      --text-muted: #64748b;
       
-      --radius-lg: 24px;
-      --radius-md: 16px;
-      --radius-sm: 8px;
+      --border: 1px solid rgba(255, 255, 255, 0.08);
+      --radius: 12px;
       
-      --font-main: "Inter", "Noto Sans JP", sans-serif;
+      --font-base: "Noto Sans JP", "Inter", sans-serif;
+      --font-mono: "Roboto Mono", monospace;
     }
 
     * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      min-height: 100vh;
-      background: radial-gradient(circle at top left, #1a222e, var(--bg-deep));
+      background-color: var(--bg-body);
       color: var(--text-main);
-      font-family: var(--font-main);
-      line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
+      font-family: var(--font-base);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden; /* アプリっぽく画面固定 */
     }
 
     /* --- Header --- */
     header {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      backdrop-filter: blur(16px);
-      background: rgba(5, 7, 10, 0.8);
-      border-bottom: 1px solid var(--border);
+      height: 60px;
+      background: rgba(20, 24, 31, 0.9);
+      backdrop-filter: blur(10px);
+      border-bottom: var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      flex-shrink: 0;
+      z-index: 10;
     }
 
     .header-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 12px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .logo-wrapper {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-
-    /* ロゴのレスポンシブ制御 */
-    .logo {
-      width: 35vw;           /* 画面幅に応じて伸縮 */
-      max-width: 160px;      /* 最大幅の制限 (これ以上大きくならない) */
-      min-width: 100px;      /* 最小幅の制限 */
-      transition: transform 0.3s ease;
-    }
-    
-    .logo:hover {
-      transform: scale(1.02);
-    }
-
-    .logo svg {
       width: 100%;
-      height: auto;
-      display: block;
-      filter: drop-shadow(0 0 8px rgba(141, 194, 31, 0.2));
+      max-width: 1600px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
-    .app-title {
+    .logo {
+      width: 140px;
+      max-width: 20vw;
+      min-width: 100px;
+      transition: opacity 0.2s;
+    }
+    .logo:hover { opacity: 0.9; }
+    .logo svg { width: 100%; height: auto; display: block; }
+
+    .app-status {
       font-size: 12px;
-      color: var(--text-sub);
-      letter-spacing: 0.05em;
-      display: none;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    @media(min-width: 600px) { .app-title { display: block; } }
+    .status-dot {
+      width: 8px; height: 8px;
+      background: #333;
+      border-radius: 50%;
+    }
+    .status-dot.active { background: var(--primary); box-shadow: 0 0 8px var(--primary); }
 
-    /* --- Layout --- */
-    .container {
-      max-width: 1200px;
-      margin: 30px auto;
-      padding: 0 20px 40px;
+    /* --- Main Layout (Dashboard) --- */
+    main {
+      flex: 1;
       display: grid;
-      grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
-      gap: 24px;
+      grid-template-columns: 380px 1fr; /* 左パネル固定幅、右可変 */
+      gap: 0;
+      overflow: hidden;
+      max-width: 1920px;
+      margin: 0 auto;
+      width: 100%;
     }
 
     @media (max-width: 900px) {
-      .container { grid-template-columns: 1fr; }
+      main { grid-template-columns: 1fr; overflow-y: auto; }
+      body { overflow: auto; height: auto; }
     }
 
-    .full-width { grid-column: 1 / -1; }
-
-    /* --- Cards & Panels --- */
-    .panel {
+    /* --- Panels --- */
+    .panel-left {
       background: var(--bg-panel);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
+      border-right: var(--border);
       padding: 24px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-      position: relative;
-      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      overflow-y: auto;
     }
-    
-    /* Card Shine Effect */
-    .panel::before {
-      content: "";
-      position: absolute;
-      top: 0; left: 0; right: 0; height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+
+    .panel-right {
+      padding: 24px;
+      background: var(--bg-body);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
     }
 
     h2 {
-      margin: 0 0 20px;
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--primary);
+      margin: 0 0 16px 0;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
-    
     h2::before {
-      content: "";
-      display: block;
-      width: 4px;
-      height: 18px;
-      background: var(--primary);
-      border-radius: 2px;
-      box-shadow: 0 0 10px var(--primary);
+      content: ''; width: 4px; height: 14px;
+      background: var(--primary); border-radius: 2px;
     }
 
-    /* --- UI Components --- */
+    /* --- Components --- */
     
     /* File Input */
-    .file-input-wrapper {
-      position: relative;
-      margin-bottom: 20px;
-    }
-    input[type="file"] {
-      display: none;
-    }
-    .file-label {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      padding: 30px;
-      background: rgba(255,255,255,0.03);
-      border: 2px dashed var(--border);
-      border-radius: var(--radius-md);
-      color: var(--text-sub);
+    .drop-zone {
+      border: 2px dashed rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      padding: 30px 20px;
+      text-align: center;
       cursor: pointer;
-      transition: all 0.3s ease;
-      font-size: 14px;
-      gap: 10px;
+      transition: all 0.2s;
+      background: rgba(255,255,255,0.02);
     }
-    .file-label:hover {
+    .drop-zone:hover {
       border-color: var(--primary);
       background: rgba(141, 194, 31, 0.05);
+    }
+    .drop-zone-text {
       color: var(--text-main);
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
     }
-    .icon-upload { font-size: 20px; }
-
-    /* Video Preview */
-    video {
-      width: 100%;
-      border-radius: var(--radius-md);
-      background: #000;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      border: 1px solid var(--border);
+    .drop-zone-sub {
+      color: var(--text-muted);
+      font-size: 11px;
+      margin-top: 4px;
     }
+    .icon-folder { font-size: 24px; }
 
-    /* Custom Sliders */
+    /* Sliders (Mixer Style) */
     .control-group {
-      margin-top: 24px;
-      background: var(--bg-card);
-      padding: 20px;
-      border-radius: var(--radius-md);
+      background: rgba(0,0,0,0.2);
+      padding: 16px;
+      border-radius: var(--radius);
+      border: var(--border);
     }
     
-    .slider-row {
+    .slider-item { margin-bottom: 20px; }
+    .slider-item:last-child { margin-bottom: 0; }
+    
+    .slider-header {
       display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 16px;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 12px;
     }
-    .slider-row:last-child { margin-bottom: 0; }
+    .label-main { color: var(--text-main); font-weight: 500; }
+    .label-val { color: var(--accent); font-family: var(--font-mono); }
     
-    .label-box { flex: 0 0 140px; font-size: 13px; color: var(--text-sub); }
-    .val-box { 
-      flex: 0 0 60px; 
-      text-align: right; 
-      font-family: monospace; 
-      font-size: 14px; 
-      color: var(--accent);
-      font-weight: bold;
+    .slider-desc {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
     }
 
     input[type="range"] {
-      flex: 1;
+      width: 100%;
       -webkit-appearance: none;
       background: transparent;
       cursor: pointer;
     }
-    
-    /* Slider Track */
     input[type="range"]::-webkit-slider-runnable-track {
       width: 100%;
-      height: 6px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 3px;
+      height: 4px;
+      background: #333;
+      border-radius: 2px;
     }
-    /* Slider Thumb */
     input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
-      height: 18px;
-      width: 18px;
+      height: 16px; width: 16px;
       border-radius: 50%;
       background: var(--text-main);
       margin-top: -6px;
-      box-shadow: 0 0 10px rgba(255,255,255,0.5);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+      border: 2px solid var(--bg-panel);
       transition: transform 0.1s;
     }
     input[type="range"]:active::-webkit-slider-thumb {
@@ -267,379 +236,347 @@
       background: var(--primary);
     }
 
-    /* Buttons */
-    .btn {
+    /* Waveform Canvas */
+    .waveform-wrap {
+      position: relative;
+      background: #000;
+      border-radius: var(--radius);
+      border: var(--border);
+      height: 120px;
+      overflow: hidden;
+    }
+    canvas { width: 100%; height: 100%; display: block; }
+    
+    /* Video Player */
+    .preview-container {
       width: 100%;
-      padding: 14px;
+      background: #000;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: var(--border);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      /* プレビューの高さ制限（自動調整） */
+      max-height: 50vh; 
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      aspect-ratio: 16 / 9;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain; /* アスペクト比を維持 */
+      max-height: 50vh;
+    }
+
+    /* Action Bar */
+    .action-bar {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px;
       border: none;
-      border-radius: var(--radius-md);
-      background: linear-gradient(135deg, var(--primary), #6a9e05);
-      color: #05070a;
-      font-weight: 700;
-      font-size: 15px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 15px rgba(141, 194, 31, 0.3);
+      transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
     }
-    .btn:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(141, 194, 31, 0.5);
-    }
-    .btn:active:not(:disabled) { transform: translateY(0); }
-    .btn:disabled {
-      background: #333;
-      color: #666;
-      box-shadow: none;
-      cursor: not-allowed;
-    }
     
-    .btn-secondary {
-      background: rgba(255,255,255,0.1);
-      color: var(--text-main);
-      box-shadow: none;
-      font-weight: 500;
+    .btn-primary {
+      background: var(--primary);
+      color: #000;
     }
-    .btn-secondary:hover:not(:disabled) {
-      background: rgba(255,255,255,0.15);
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-1px); }
+    .btn-primary:disabled { background: #333; color: #555; cursor: not-allowed; }
 
-    /* Canvas */
-    canvas {
-      width: 100%;
-      height: 100px;
-      background: #020202;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      margin-top: 16px;
+    .btn-secondary {
+      background: rgba(255,255,255,0.08);
+      color: var(--text-main);
     }
+    .btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,0.12); }
+    .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* Segment List */
-    .segments-container {
-      margin-top: 10px;
-      background: #080a0e;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border);
+    .segment-list-wrap {
+      flex: 1;
+      background: var(--bg-panel);
+      border-radius: var(--radius);
+      border: var(--border);
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 0; /* Flexbox内でスクロールさせるために必要 */
     }
-    .segments-header {
-      padding: 10px 15px;
+    .list-header {
+      padding: 12px 16px;
+      background: rgba(0,0,0,0.2);
       font-size: 12px;
-      color: var(--text-sub);
-      border-bottom: 1px solid var(--border);
-      background: rgba(255,255,255,0.02);
+      color: var(--text-muted);
+      border-bottom: var(--border);
       display: flex;
       justify-content: space-between;
     }
-    .segments-list {
-      max-height: 240px;
+    .list-body {
+      flex: 1;
       overflow-y: auto;
     }
-    /* Custom Scrollbar */
-    .segments-list::-webkit-scrollbar { width: 6px; }
-    .segments-list::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-    
-    .segment-item {
-      padding: 10px 15px;
-      border-bottom: 1px solid rgba(255,255,255,0.03);
+    .segment-row {
       display: flex;
       justify-content: space-between;
+      padding: 10px 16px;
       font-size: 13px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
       cursor: pointer;
-      transition: background 0.15s;
     }
-    .segment-item:hover { background: rgba(255,255,255,0.05); }
-    .segment-item span:first-child { color: var(--accent); font-weight: 600; }
-    .segment-item span:last-child { color: var(--text-sub); font-size: 12px; }
+    .segment-row:hover { background: rgba(255,255,255,0.05); }
+    .row-id { color: var(--text-muted); width: 30px; }
+    .row-time { color: var(--text-main); }
+    .row-dur { color: var(--primary); font-weight: 500; }
 
-    /* Progress & Status */
-    .progress-wrap {
-      margin-top: 15px;
-      background: rgba(255,255,255,0.05);
-      border-radius: 100px;
-      height: 8px;
+    /* Export Section */
+    .export-section {
+      background: var(--bg-panel);
+      border: var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+    .progress-bar {
+      height: 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+      margin: 12px 0;
       overflow: hidden;
     }
     .progress-fill {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, var(--secondary), #a0d3ff);
-      border-radius: 100px;
+      height: 100%; width: 0%;
+      background: var(--accent);
       transition: width 0.2s;
-      box-shadow: 0 0 10px rgba(74, 163, 255, 0.5);
     }
-    .status-msg {
-      font-size: 13px;
-      margin-top: 10px;
-      min-height: 20px;
-      color: var(--text-sub);
-    }
-    .status-msg.err { color: #ff6b6b; }
-
-    /* Alert Box */
-    #coopAlert {
-      background: rgba(255, 107, 107, 0.15);
-      border: 1px solid #ff6b6b;
-      color: #ffb8b8;
-      padding: 12px 20px;
-      border-radius: var(--radius-sm);
-      margin-bottom: 20px;
-      font-size: 13px;
+    
+    .log-console {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: #666;
+      height: 60px;
+      overflow-y: auto;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding-top: 8px;
+      margin-top: 8px;
     }
 
-    /* Log Area */
-    .log-area {
-      width: 100%;
-      height: 140px;
-      background: #080a0e;
-      color: #22c55e; /* Hacker green */
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 15px;
-      font-family: "SFMono-Regular", Consolas, monospace;
-      font-size: 11px;
-      resize: vertical;
-      outline: none;
-    }
-
-    /* Footer Link */
-    #downloadLink {
-      margin-top: 15px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      padding: 12px;
-      border: 1px solid var(--secondary);
-      border-radius: var(--radius-md);
-      color: var(--secondary);
+    #downloadBtn {
+      display: none;
       text-decoration: none;
-      font-size: 14px;
+      text-align: center;
+      display: block;
+      background: rgba(74, 163, 255, 0.1);
+      color: var(--accent);
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 13px;
       font-weight: 600;
-      background: rgba(74, 163, 255, 0.05);
-      transition: all 0.2s;
+      margin-top: 10px;
+      transition: background 0.2s;
+      display: none; /* JSで制御 */
     }
-    #downloadLink:hover {
-      background: rgba(74, 163, 255, 0.15);
-    }
+    #downloadBtn:hover { background: rgba(74, 163, 255, 0.2); }
+
   </style>
 </head>
 <body>
 
   <header>
     <div class="header-inner">
-      <div class="logo-wrapper">
-        <!-- Logo -->
-        <div class="logo">
-          <svg version="1.1" xmlns="http://www.w3.org/2000/svg"
-               xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-               viewBox="0 0 266 44" style="enable-background:new 0 0 266 44;" xml:space="preserve">
-            <style type="text/css">
-              .st0{fill:#C0CD7D;}
-              .st1{fill:#8DC21F;}
-              .st2{fill:#1D412C;}
-              .st3{fill:#45855B;}
-              .st4{fill:#A9CD36;}
-              .st5{fill:#595757;} /* Changed text color for dark mode */
-              .st6{fill:#006134;}
-            </style>
-            <g>
-              <g>
-                <polygon class="st0" points="26,16.6 9.7,16.6 22.8,26.2"/>
-              </g>
-              <polygon class="st1" points="46.7,43.5 38,16.6 32.6,14.7 27.2,16.6 18.4,43.5 32.6,33.4"/>
-              <polygon class="st0" points="46.7,43.5 38,16.6 32.6,14.7 32.6,33.4"/>
-              <polygon class="st2" points="32.6,14.7 38,16.6 32.6,0 27.2,16.6"/>
-              <polygon class="st3" points="32.6,14.7 38,16.6 32.6,0"/>
-              <g>
-                <polygon class="st4" points="55.4,16.6 39.2,16.6 42.3,26.2"/>
-              </g>
-            </g>
-            <g>
-              <polygon class="st5" points="192.3,5.2 189.7,5.2 189.4,9.7 192.1,9.7"/>
-              <polygon class="st5" points="196.4,5.3 193.8,5.3 193.6,9.7 196.2,9.7"/>
-            </g>
-            <polygon class="st5" points="257.9,21.2 256.6,21.2 256.3,21.2 254.6,21.2 231.2,21.2 230.9,26.2 256.3,26.2 256.3,26.2"/>
-            <path class="st5" d="M102.8,8.5l-1.6,4.9h23c-1.1,4.5-3.9,7.2-8.4,8.5c0.2-1.2,0.3-2.2,0.4-3.4l0.1-2.4h-5l-0.1,2.2
-              c-0.4,7.6-2.8,12-9.2,14.4l-0.2,0.1l-0.3,4.9l0.3-0.1c6.1-1.6,9.8-5,12.2-10.1c5.6-1,15-4.6,16.2-17.8l0.1-1.1
-              C130.2,8.5,105.3,8.5,102.8,8.5z"/>
-            <path class="st5" d="M147.8,12.7l0.3-5.5h-5.2l-0.3,5.5h-7.4l-1.5,4.8h8.7c-0.6,6.5-3.9,11.8-9.4,14.9l-0.1,0.1l-0.3,5.2l0.3-0.1
-              c8.2-2.9,13.5-10.2,14.6-20h9.2l-0.6,11.3c-0.1,2.6-1.1,3.5-3.7,3.5h-4.3l-1.6,4.8h6.6c5.4,0,8-2.5,8.3-8l0.9-16.4H147.8z"/>
-            <g>
-              <path class="st5" d="M168.8,17.4l-1.5,4.7h14.4c-1.1,5.7-5.6,9.4-12,10.4l-0.2,0l-0.3,4.9l0.3,0c6.8-0.9,15.7-4.3,17.8-15.4h10.3
-                l0.2-4.7H168.8z"/>
-              <polygon class="st5" points="187.9,11.2 188,8.5 171.9,8.5 170.5,12.9 170.4,13.3 196,13.3 196.1,11.2"/>
-            </g>
-            <g>
-              <path class="st5" d="M226.4,10.2c-7.2-0.9-15.5-1.3-23.2-1.5l-1.5,4.6c8.5,0.1,15.7,0.6,24.4,1.6L226.4,10.2z"/>
-              <path class="st5" d="M224.7,21.2c-7.2-1.1-13.8-1.4-20.2-1.6L203,24c7.4,0.2,13.8,0.7,21.4,1.8L224.7,21.2z"/>
-              <path class="st5" d="M201.2,30.5l-1.5,4.6c8.9,0.3,18,1.2,26.9,2.8l0.3-4.8C218.3,31.6,210,30.8,201.2,30.5z"/>
-            </g>
-            <path class="st6" d="M64.8,37.6l1.5-4.7h21.2c1-0.1,1.8-0.4,2.5-1.1c0.6-0.8,1-1.7,1-2.7c0-1-0.3-1.9-1-2.7
-              c-0.7-0.8-1.5-1.2-2.5-1.2H71.7c-1.9,0-3.5-0.8-4.9-2.4c-1.4-1.7-2.1-3.6-2.1-6c0-2.4,0.7-4.3,2.1-5.9c1.4-1.6,3-2.4,5-2.5h23.6
-              l-1.6,4.9H72.9c0,0-0.1,0-0.2,0c-0.6,0-1.4,0.2-2.2,1.1c-0.5,0.6-0.8,1.4-0.8,2.4c0,0.9,0.3,1.7,0.9,2.4c0.6,0.7,1.4,1.1,2.3,1.1
-              h15.3c2,0,3.6,0.8,5,2.4c1.5,1.7,2.2,3.7,2.2,6.2c0,2.5-0.7,4.5-2.2,6.2c-1.4,1.7-3.1,2.5-5.1,2.5L64.8,37.6L64.8,37.6z"/>
-          </svg>
-        </div>
-        <span class="app-title">PRO EDITION</span>
+      <div class="logo">
+        <!-- SVG Logo -->
+        <svg version="1.1" viewBox="0 0 266 44" xml:space="preserve">
+          <style type="text/css">
+            .st0{fill:#C0CD7D;} .st1{fill:#8DC21F;} .st2{fill:#1D412C;}
+            .st3{fill:#45855B;} .st4{fill:#A9CD36;} .st5{fill:#e2e8f0;}
+            .st6{fill:#006134;}
+          </style>
+          <g>
+            <g><polygon class="st0" points="26,16.6 9.7,16.6 22.8,26.2"/></g>
+            <polygon class="st1" points="46.7,43.5 38,16.6 32.6,14.7 27.2,16.6 18.4,43.5 32.6,33.4"/>
+            <polygon class="st0" points="46.7,43.5 38,16.6 32.6,14.7 32.6,33.4"/>
+            <polygon class="st2" points="32.6,14.7 38,16.6 32.6,0 27.2,16.6"/>
+            <polygon class="st3" points="32.6,14.7 38,16.6 32.6,0"/>
+            <g><polygon class="st4" points="55.4,16.6 39.2,16.6 42.3,26.2"/></g>
+          </g>
+          <g>
+            <polygon class="st5" points="192.3,5.2 189.7,5.2 189.4,9.7 192.1,9.7"/>
+            <polygon class="st5" points="196.4,5.3 193.8,5.3 193.6,9.7 196.2,9.7"/>
+          </g>
+          <polygon class="st5" points="257.9,21.2 256.6,21.2 256.3,21.2 254.6,21.2 231.2,21.2 230.9,26.2 256.3,26.2 256.3,26.2"/>
+          <path class="st5" d="M102.8,8.5l-1.6,4.9h23c-1.1,4.5-3.9,7.2-8.4,8.5c0.2-1.2,0.3-2.2,0.4-3.4l0.1-2.4h-5l-0.1,2.2
+            c-0.4,7.6-2.8,12-9.2,14.4l-0.2,0.1l-0.3,4.9l0.3-0.1c6.1-1.6,9.8-5,12.2-10.1c5.6-1,15-4.6,16.2-17.8l0.1-1.1
+            C130.2,8.5,105.3,8.5,102.8,8.5z"/>
+          <path class="st5" d="M147.8,12.7l0.3-5.5h-5.2l-0.3,5.5h-7.4l-1.5,4.8h8.7c-0.6,6.5-3.9,11.8-9.4,14.9l-0.1,0.1l-0.3,5.2l0.3-0.1
+            c8.2-2.9,13.5-10.2,14.6-20h9.2l-0.6,11.3c-0.1,2.6-1.1,3.5-3.7,3.5h-4.3l-1.6,4.8h6.6c5.4,0,8-2.5,8.3-8l0.9-16.4H147.8z"/>
+          <g>
+            <path class="st5" d="M168.8,17.4l-1.5,4.7h14.4c-1.1,5.7-5.6,9.4-12,10.4l-0.2,0l-0.3,4.9l0.3,0c6.8-0.9,15.7-4.3,17.8-15.4h10.3
+              l0.2-4.7H168.8z"/>
+            <polygon class="st5" points="187.9,11.2 188,8.5 171.9,8.5 170.5,12.9 170.4,13.3 196,13.3 196.1,11.2"/>
+          </g>
+          <g>
+            <path class="st5" d="M226.4,10.2c-7.2-0.9-15.5-1.3-23.2-1.5l-1.5,4.6c8.5,0.1,15.7,0.6,24.4,1.6L226.4,10.2z"/>
+            <path class="st5" d="M224.7,21.2c-7.2-1.1-13.8-1.4-20.2-1.6L203,24c7.4,0.2,13.8,0.7,21.4,1.8L224.7,21.2z"/>
+            <path class="st5" d="M201.2,30.5l-1.5,4.6c8.9,0.3,18,1.2,26.9,2.8l0.3-4.8C218.3,31.6,210,30.8,201.2,30.5z"/>
+          </g>
+          <path class="st6" d="M64.8,37.6l1.5-4.7h21.2c1-0.1,1.8-0.4,2.5-1.1c0.6-0.8,1-1.7,1-2.7c0-1-0.3-1.9-1-2.7
+            c-0.7-0.8-1.5-1.2-2.5-1.2H71.7c-1.9,0-3.5-0.8-4.9-2.4c-1.4-1.7-2.1-3.6-2.1-6c0-2.4,0.7-4.3,2.1-5.9c1.4-1.6,3-2.4,5-2.5h23.6
+            l-1.6,4.9H72.9c0,0-0.1,0-0.2,0c-0.6,0-1.4,0.2-2.2,1.1c-0.5,0.6-0.8,1.4-0.8,2.4c0,0.9,0.3,1.7,0.9,2.4c0.6,0.7,1.4,1.1,2.3,1.1
+            h15.3c2,0,3.6,0.8,5,2.4c1.5,1.7,2.2,3.7,2.2,6.2c0,2.5-0.7,4.5-2.2,6.2c-1.4,1.7-3.1,2.5-5.1,2.5L64.8,37.6L64.8,37.6z"/>
+        </svg>
+      </div>
+      <div class="app-status">
+        <div id="statusDot" class="status-dot"></div>
+        <span id="statusText">待機中</span>
       </div>
     </div>
   </header>
 
-  <main class="container">
-    <!-- COOP Alert -->
-    <div id="coopAlert" style="display:none;">
-      <strong>⚠️ System Warning:</strong> SharedArrayBuffer is not enabled. Performance will be degraded. Please ensure HTTPS and COOP/COEP headers.
+  <main>
+    <!-- Left Panel: Controls -->
+    <div class="panel-left">
+      <!-- File Input -->
+      <label class="drop-zone">
+        <input type="file" id="fileInput" accept="video/*,audio/*" style="display:none;">
+        <div class="icon-folder">📂</div>
+        <div class="drop-zone-text">動画ファイルを選択</div>
+        <div class="drop-zone-sub" id="fileNameDisplay">またはここにドラッグ＆ドロップ</div>
+      </label>
+
+      <!-- Waveform (Visualizer) -->
+      <div>
+        <h2><span style="font-size:18px">📊</span> 解析波形</h2>
+        <div class="waveform-wrap">
+          <canvas id="waveformCanvas" title="クリックで再生位置を移動"></canvas>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:10px; color:#666; margin-top:4px;">
+          <span>無音 (-60dB)</span>
+          <span>最大音量 (0dB)</span>
+        </div>
+      </div>
+
+      <!-- Parameters -->
+      <div class="control-group">
+        <h2>🎚 パラメータ調整</h2>
+        
+        <div class="slider-item">
+          <div class="slider-header">
+            <span class="label-main">しきい値 (Threshold)</span>
+            <span class="label-val" id="thresholdVal">-30 dB</span>
+          </div>
+          <div class="slider-desc">この値より小さい音を「無音」とみなします。</div>
+          <input type="range" id="threshold" min="-60" max="-10" value="-30" step="1">
+        </div>
+
+        <div class="slider-item">
+          <div class="slider-header">
+            <span class="label-main">最短発話時間</span>
+            <span class="label-val" id="minDurationVal">0.3 s</span>
+          </div>
+          <div class="slider-desc">これより短い音はノイズとみなしカットします。</div>
+          <input type="range" id="minDuration" min="0.1" max="2.0" value="0.3" step="0.1">
+        </div>
+
+        <div class="slider-item">
+          <div class="slider-header">
+            <span class="label-main">前後の余白</span>
+            <span class="label-val" id="paddingVal">0.1 s</span>
+          </div>
+          <div class="slider-desc">カット区間の前後に余韻を残します。</div>
+          <input type="range" id="padding" min="0.0" max="1.0" value="0.1" step="0.05">
+        </div>
+
+        <button id="analyzeBtn" class="btn btn-primary" style="width:100%; margin-top:12px;" disabled>
+          🔍 音量を解析する
+        </button>
+      </div>
     </div>
 
-    <!-- Left Panel: Input & Analyze -->
-    <section class="panel">
-      <h2><span style="opacity:0.5; margin-right:5px;">01.</span> Import & Analyze</h2>
+    <!-- Right Panel: Preview & Output -->
+    <div class="panel-right">
       
-      <!-- Custom File Input -->
-      <div class="file-input-wrapper">
-        <label for="fileInput" class="file-label">
-          <span class="icon-upload">📂</span>
-          <span>Select Video or Audio File</span>
-        </label>
-        <input type="file" id="fileInput" accept="video/*,audio/*" />
+      <!-- Video Monitor -->
+      <div class="preview-container">
+        <video id="previewPlayer" playsinline controls></video>
       </div>
       
-      <video id="previewPlayer" controls playsinline style="display:none; margin-bottom:20px;"></video>
-
-      <!-- Sliders -->
-      <div class="control-group">
-        <div class="slider-row">
-          <div class="label-box">Threshold</div>
-          <input type="range" id="threshold" min="-60" max="-10" value="-30" step="1">
-          <div class="val-box" id="thresholdVal">-30 dB</div>
-        </div>
-
-        <div class="slider-row">
-          <div class="label-box">Min Duration</div>
-          <input type="range" id="minDuration" min="0.1" max="2.0" value="0.3" step="0.1">
-          <div class="val-box" id="minDurationVal">0.3 s</div>
-        </div>
-
-        <div class="slider-row">
-          <div class="label-box">Padding</div>
-          <input type="range" id="padding" min="0.0" max="1.0" value="0.1" step="0.05">
-          <div class="val-box" id="paddingVal">0.1 s</div>
-        </div>
-      </div>
-
-      <button id="analyzeBtn" class="btn" disabled style="margin-top:24px;">
-        <span>⚡ Analyze Audio</span>
-      </button>
-      
-      <div id="analyzeStatus" class="status-msg"></div>
-
-      <canvas id="waveformCanvas" title="Click to seek"></canvas>
-      <div style="display:flex; justify-content:space-between; font-size:10px; color:#666; margin-top:4px;">
-        <span>Silence (-60dB)</span>
-        <span>Loud (0dB)</span>
-      </div>
-    </section>
-
-    <!-- Right Panel: Preview & Export -->
-    <section class="panel">
-      <h2><span style="opacity:0.5; margin-right:5px;">02.</span> Preview & Export</h2>
-      
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:16px;">
-        <button id="previewCutBtn" class="btn btn-secondary" disabled>▶ Preview Cuts</button>
-        <button id="stopPreviewBtn" class="btn btn-secondary" style="background:rgba(255,107,107,0.2); color:#ffadad; display:none;">■ Stop</button>
+      <div class="action-bar">
+        <button id="previewCutBtn" class="btn btn-secondary" disabled>▶ カット後をプレビュー</button>
+        <button id="stopPreviewBtn" class="btn btn-secondary" style="display:none; color:#ff6b6b;">■ 停止</button>
       </div>
 
       <!-- Segment List -->
-      <div class="segments-container">
-        <div class="segments-header">
-          <span>Detected Segments</span>
-          <span id="segmentCount">Waiting...</span>
+      <div class="segment-list-wrap">
+        <div class="list-header">
+          <span>検出された発話区間</span>
+          <span id="segmentCount">0 箇所</span>
         </div>
-        <div class="segments-list" id="segmentsList">
-          <div style="padding:20px; color:#444; text-align:center; font-size:13px;">
-            Analysis not started.
+        <div class="list-body" id="segmentsList">
+          <div style="padding:20px; text-align:center; color:#444; font-size:12px;">
+            まだ解析されていません
           </div>
         </div>
       </div>
 
-      <div style="margin-top: 24px;">
-        <button id="exportBtn" class="btn" disabled>
-          <span>✂️ Export Video</span>
+      <!-- Export -->
+      <div class="export-section">
+        <button id="exportBtn" class="btn btn-primary" style="width:100%;" disabled>
+          🎬 動画を書き出し (エンコード)
         </button>
         
-        <div class="progress-wrap">
+        <div class="progress-bar">
           <div id="exportProgress" class="progress-fill"></div>
         </div>
         
-        <div id="exportStatus" class="status-msg"></div>
+        <div class="status-msg" id="exportStatus" style="font-size:12px; color:#aaa;"></div>
+        <a id="downloadBtn" href="#" download>⬇ 動画をダウンロード</a>
         
-        <a id="downloadLink" style="display:none;" href="#">
-          ⬇ Download Result
-        </a>
+        <div class="log-console" id="logConsole">System Ready.</div>
       </div>
-    </section>
 
-    <!-- Log Panel -->
-    <section class="panel full-width" style="padding: 15px;">
-      <h3 style="font-size:12px; color:var(--text-sub); margin:0 0 8px;">SYSTEM LOG</h3>
-      <textarea id="ffmpegLog" class="log-area" readonly></textarea>
-    </section>
+    </div>
   </main>
 
   <script>
-  // --- DOM Elements ---
+  // --- UI Elements ---
   const fileInput = document.getElementById('fileInput');
+  const fileNameDisplay = document.getElementById('fileNameDisplay');
   const previewPlayer = document.getElementById('previewPlayer');
+  
+  // Canvas
+  const waveformCanvas = document.getElementById('waveformCanvas');
+
+  // Buttons
   const analyzeBtn = document.getElementById('analyzeBtn');
   const exportBtn = document.getElementById('exportBtn');
   const previewCutBtn = document.getElementById('previewCutBtn');
   const stopPreviewBtn = document.getElementById('stopPreviewBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+
+  // Lists & Status
   const segmentsList = document.getElementById('segmentsList');
-  const waveformCanvas = document.getElementById('waveformCanvas');
-  const logArea = document.getElementById('ffmpegLog');
-  const downloadLink = document.getElementById('downloadLink');
+  const exportProgress = document.getElementById('exportProgress');
+  const exportStatus = document.getElementById('exportStatus');
+  const logConsole = document.getElementById('logConsole');
+  const statusDot = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
 
   // Sliders
   const sThreshold = document.getElementById('threshold');
   const sMinDur = document.getElementById('minDuration');
   const sPadding = document.getElementById('padding');
-
-  // Status
-  const analyzeStatus = document.getElementById('analyzeStatus');
-  const exportStatus = document.getElementById('exportStatus');
-  const exportProgressBar = document.getElementById('exportProgress');
-
-  // --- Utils ---
-  const log = (msg) => {
-    const time = new Date().toLocaleTimeString();
-    logArea.value += `[${time}] ${msg}\n`;
-    logArea.scrollTop = logArea.scrollHeight;
-  };
-
-  const updateSliderVal = (id, val, unit) => {
-    document.getElementById(id).textContent = val + unit;
-  };
-
-  // --- Slider Logic (Fixed) ---
-  [sThreshold, sMinDur, sPadding].forEach(el => {
-    // Update visual value instantly
-    el.addEventListener('input', () => {
-      updateSliderVal(el.id + 'Val', el.value, el.id === 'threshold' ? ' dB' : ' s');
-    });
-
-    // Trigger calculation only on release
-    el.addEventListener('change', () => {
-      if(audioBuffer) {
-        log("Re-calculating segments...");
-        detectSilence();
-      }
-    });
-  });
 
   // --- State ---
   let ffmpeg = null;
@@ -649,92 +586,119 @@
   let isPreviewingCuts = false;
   let previewTimeout = null;
 
-  // --- Environment Check ---
+  // --- Utils ---
+  const log = (msg) => {
+    const t = new Date().toLocaleTimeString();
+    logConsole.innerText = `[${t}] ${msg}\n` + logConsole.innerText;
+  };
+
+  const setStatus = (msg, active = false) => {
+    statusText.innerText = msg;
+    if(active) statusDot.classList.add('active');
+    else statusDot.classList.remove('active');
+  };
+
+  const updateSliderUI = (id, val, unit) => {
+    document.getElementById(id + 'Val').innerText = val + unit;
+  };
+
+  // --- Initialization ---
   if (!window.crossOriginIsolated) {
-    document.getElementById('coopAlert').style.display = 'block';
-    log("Warning: SharedArrayBuffer not isolated.");
+    log("⚠️ 注意: SharedArrayBufferが無効です。処理速度が低下する可能性があります。");
   }
 
-  // --- 1. Initialize FFmpeg ---
+  // --- Event Listeners for Sliders ---
+  [sThreshold, sMinDur, sPadding].forEach(el => {
+    // 1. Input: 数値表示と「しきい値ライン」の再描画のみ（高速）
+    el.addEventListener('input', () => {
+      updateSliderUI(el.id, el.value, el.id === 'threshold' ? ' dB' : ' s');
+      if (audioBuffer) {
+        // 波形だけ再描画（しきい値ラインを動かすため）
+        const rawData = audioBuffer.getChannelData(0);
+        drawWaveformWithThreshold(rawData, audioBuffer.sampleRate);
+      }
+    });
+
+    // 2. Change: マウスを離したときに計算実行
+    el.addEventListener('change', () => {
+      if (audioBuffer) {
+        detectSilence();
+      }
+    });
+  });
+
+  // --- FFmpeg Load ---
   const initFFmpeg = async () => {
     if (ffmpeg) return;
     const { createFFmpeg, fetchFile } = FFmpeg;
+    log("システム起動中: FFmpegをロードしています...");
     
-    log("Initializing FFmpeg Core...");
     ffmpeg = createFFmpeg({
-      log: true,
+      log: false, // コンソールログ抑制
       corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
       progress: ({ ratio }) => {
-        if(ratio >= 0 && ratio <= 1) {
-          exportProgressBar.style.width = `${ratio * 100}%`;
-          if(ratio < 1) exportStatus.innerText = `Encoding... ${(ratio * 100).toFixed(0)}%`;
+        if (ratio >= 0 && ratio <= 1) {
+          exportProgress.style.width = `${ratio * 100}%`;
+          exportStatus.innerText = `処理中... ${(ratio * 100).toFixed(0)}%`;
         }
       }
     });
-    
-    try {
-      await ffmpeg.load();
-      log("FFmpeg Ready.");
-    } catch (e) {
-      log("FFmpeg Load Error: " + e.message);
-    }
+    await ffmpeg.load();
+    log("システム準備完了: FFmpeg Ready");
   };
 
-  // --- 2. File Loading ---
-  fileInput.addEventListener('change', async (e) => {
+  // --- File Input ---
+  fileInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
     
     rawFile = file;
+    fileNameDisplay.innerText = file.name;
     previewPlayer.src = URL.createObjectURL(file);
-    previewPlayer.style.display = 'block';
     
-    // Reset UI
+    // Reset
     audioBuffer = null;
     detectedSegments = [];
-    waveformCanvas.getContext('2d').clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
-    segmentsList.innerHTML = '<div style="padding:20px; color:#666; text-align:center;">Ready to Analyze</div>';
-    
-    analyzeBtn.disabled = false;
     exportBtn.disabled = true;
     previewCutBtn.disabled = true;
-    downloadLink.style.display = 'none';
-    exportStatus.innerText = "";
-    exportProgressBar.style.width = "0%";
+    downloadBtn.style.display = 'none';
+    analyzeBtn.disabled = false;
     
-    // Change label text
-    document.querySelector('.file-label span:last-child').textContent = file.name;
-    log(`Selected: ${file.name}`);
+    setStatus("ファイル選択済み", true);
+    log(`ファイル読み込み: ${file.name}`);
+
+    // キャンバスリセット
+    const ctx = waveformCanvas.getContext('2d');
+    ctx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+    segmentsList.innerHTML = '<div style="padding:20px; text-align:center; color:#444;">解析ボタンを押してください</div>';
   });
 
-  // --- 3. Analysis (Web Audio + Fallback) ---
+  // --- Analyze ---
   analyzeBtn.addEventListener('click', async () => {
     if (!rawFile) return;
-    
     analyzeBtn.disabled = true;
-    analyzeStatus.innerText = "Decoding Audio...";
-
+    setStatus("音声解析中...", true);
+    
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       
       try {
-        log("Attempting native decode...");
-        const arrayBuffer = await rawFile.arrayBuffer();
-        audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
-        log("Native decode success.");
-      } catch (nativeError) {
-        log("Native decode failed. Using FFmpeg fallback...");
-        analyzeStatus.innerText = "Native decode failed. Trying FFmpeg...";
+        log("ネイティブデコーダーで解析中...");
+        const ab = await rawFile.arrayBuffer();
+        audioBuffer = await audioCtx.decodeAudioData(ab.slice(0));
+      } catch (e) {
+        log("ネイティブデコード失敗。FFmpegフォールバックを使用します...");
         audioBuffer = await decodeWithFFmpeg(rawFile, audioCtx);
       }
-      
+
+      log(`解析完了: ${audioBuffer.duration.toFixed(2)}秒`);
       detectSilence();
-      analyzeStatus.innerText = "Analysis Complete.";
+      setStatus("解析完了", false);
 
     } catch (e) {
       console.error(e);
-      analyzeStatus.innerText = "Error: " + e.message;
-      analyzeStatus.classList.add('err');
+      log("エラー: " + e.message);
+      setStatus("解析エラー", false);
     } finally {
       analyzeBtn.disabled = false;
     }
@@ -742,93 +706,65 @@
 
   async function decodeWithFFmpeg(file, audioCtx) {
     if (!ffmpeg) await initFFmpeg();
-    if (!ffmpeg.isLoaded()) throw new Error("FFmpeg not loaded");
-
     const { fetchFile } = FFmpeg;
-    const inputName = 'temp_in.mov';
-    const outputName = 'temp_out.wav';
-
-    log("FFmpeg: Extracting PCM...");
-    ffmpeg.FS('writeFile', inputName, await fetchFile(file));
-
-    await ffmpeg.run(
-      '-i', inputName,
-      '-vn',
-      '-acodec', 'pcm_s16le',
-      '-ar', '44100',
-      '-ac', '1',
-      outputName
-    );
-
-    const data = ffmpeg.FS('readFile', outputName);
-    try { ffmpeg.FS('unlink', inputName); ffmpeg.FS('unlink', outputName); } catch(e){}
-
+    const name = 'temp.mov';
+    ffmpeg.FS('writeFile', name, await fetchFile(file));
+    await ffmpeg.run('-i', name, '-vn', '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '1', 'out.wav');
+    const data = ffmpeg.FS('readFile', 'out.wav');
+    ffmpeg.FS('unlink', name); ffmpeg.FS('unlink', 'out.wav');
     return await audioCtx.decodeAudioData(data.buffer);
   }
 
-  // --- 4. Detection Logic ---
+  // --- Detection Logic ---
   function detectSilence() {
     if (!audioBuffer) return;
-
+    
     const rawData = audioBuffer.getChannelData(0);
-    const sampleRate = audioBuffer.sampleRate;
+    const sr = audioBuffer.sampleRate;
     
-    const thresholdDB = parseFloat(sThreshold.value);
-    const minDuration = parseFloat(sMinDur.value);
-    const padding = parseFloat(sPadding.value);
+    const thDB = parseFloat(sThreshold.value);
+    const minDur = parseFloat(sMinDur.value);
+    const pad = parseFloat(sPadding.value);
     
-    const windowSize = Math.floor(sampleRate * 0.05); // 50ms
+    const winSize = Math.floor(sr * 0.05); // 50ms
     const segments = [];
     
     let isSpeaking = false;
     let startFrame = 0;
     
-    for (let i = 0; i < rawData.length; i += windowSize) {
+    // 1. RMS Detect
+    for (let i = 0; i < rawData.length; i += winSize) {
       let sum = 0;
-      const end = Math.min(i + windowSize, rawData.length);
-      for (let j = i; j < end; j++) {
-        sum += rawData[j] * rawData[j];
-      }
+      const end = Math.min(i + winSize, rawData.length);
+      for (let j = i; j < end; j++) { sum += rawData[j] * rawData[j]; }
       const rms = Math.sqrt(sum / (end - i));
       const db = 20 * Math.log10(rms);
       
-      const isLoud = db > thresholdDB;
-      
+      const isLoud = db > thDB;
       if (isLoud && !isSpeaking) {
-        isSpeaking = true;
-        startFrame = i;
+        isSpeaking = true; startFrame = i;
       } else if (!isLoud && isSpeaking) {
         isSpeaking = false;
-        segments.push({ start: startFrame / sampleRate, end: i / sampleRate });
+        segments.push({ start: startFrame/sr, end: i/sr });
       }
     }
-    if (isSpeaking) {
-      segments.push({ start: startFrame / sampleRate, end: rawData.length / sampleRate });
-    }
+    if (isSpeaking) segments.push({ start: startFrame/sr, end: rawData.length/sr });
 
+    // 2. Merge & Pad
     let merged = [];
     if (segments.length > 0) {
-      let current = { 
-        start: Math.max(0, segments[0].start - padding), 
-        end: segments[0].end + padding 
-      };
-      
+      let cur = { start: Math.max(0, segments[0].start - pad), end: segments[0].end + pad };
       for (let k = 1; k < segments.length; k++) {
-        const nextStart = Math.max(0, segments[k].start - padding);
-        const nextEnd = segments[k].end + padding;
-        
-        if (nextStart <= current.end) {
-          current.end = Math.max(current.end, nextEnd);
+        const nS = Math.max(0, segments[k].start - pad);
+        const nE = segments[k].end + pad;
+        if (nS <= cur.end) {
+          cur.end = Math.max(cur.end, nE);
         } else {
-          if (current.end - current.start >= minDuration) {
-            merged.push(current);
-          }
-          current = { start: nextStart, end: nextEnd };
+          if (cur.end - cur.start >= minDur) merged.push(cur);
+          cur = { start: nS, end: nE };
         }
       }
-      if (current.end - current.start >= minDuration) {
-        merged.push(current);
-      }
+      if (cur.end - cur.start >= minDur) merged.push(cur);
     }
     
     detectedSegments = merged.map(s => ({
@@ -836,209 +772,219 @@
       end: Math.min(audioBuffer.duration, s.end)
     }));
 
-    log(`Segments found: ${detectedSegments.length}`);
+    log(`区間検出: ${detectedSegments.length}箇所`);
     
-    drawWaveform(rawData, sampleRate);
-    renderSegmentList();
-    
-    if (detectedSegments.length > 0) {
-      exportBtn.disabled = false;
-      previewCutBtn.disabled = false;
-    } else {
-      exportBtn.disabled = true;
-      previewCutBtn.disabled = true;
-    }
+    // 描画とリスト更新
+    drawWaveformWithThreshold(rawData, sr);
+    renderList();
+
+    const hasSeg = detectedSegments.length > 0;
+    exportBtn.disabled = !hasSeg;
+    previewCutBtn.disabled = !hasSeg;
   }
 
-  // --- 5. Visualization ---
-  function drawWaveform(data, sampleRate) {
+  // --- Waveform with Auto-Scaling & Threshold Line ---
+  function drawWaveformWithThreshold(data, sr) {
     const ctx = waveformCanvas.getContext('2d');
     const w = waveformCanvas.width = waveformCanvas.offsetWidth;
-    const h = waveformCanvas.height;
+    const h = waveformCanvas.height = waveformCanvas.offsetHeight;
     
     ctx.clearRect(0, 0, w, h);
-    
-    // Grid lines
-    ctx.strokeStyle = '#222';
-    ctx.beginPath();
-    ctx.moveTo(0, h/2); ctx.lineTo(w, h/2);
-    ctx.stroke();
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, w, h);
 
-    const step = Math.ceil(data.length / w);
-    const amp = h / 2;
-    
+    // 1. Auto-Scaling (最大音量を探して正規化する)
+    // 処理を軽くするため、100サンプル飛ばし程度で最大値を探す
+    let maxAmp = 0;
+    for (let i=0; i < data.length; i += 100) {
+      const val = Math.abs(data[i]);
+      if (val > maxAmp) maxAmp = val;
+    }
+    if (maxAmp < 0.01) maxAmp = 0.01; // ゼロ除算防止
+    const scaleFactor = (h / 2) * 0.9 / maxAmp; // 高さの90%まで使う
+
+    // 2. Draw Wave
     ctx.beginPath();
-    // Stylish gradient waveform
-    const gradient = ctx.createLinearGradient(0, 0, 0, h);
-    gradient.addColorStop(0, '#4aa3ff');
-    gradient.addColorStop(1, '#8DC21F');
-    ctx.strokeStyle = gradient;
+    ctx.strokeStyle = '#8DC21F'; // Primary Green
     ctx.lineWidth = 1;
+    
+    const step = Math.ceil(data.length / w);
+    const centerY = h / 2;
 
-    for(let i=0; i < w; i++) {
-      const idx = i * step;
+    for(let x=0; x < w; x++) {
+      const idx = x * step;
       const val = data[idx] || 0;
-      // exaggerate small sounds for visibility
-      const y = val * 1.5; 
-      ctx.moveTo(i, amp - y * amp);
-      ctx.lineTo(i, amp + y * amp);
+      const y = val * scaleFactor; 
+      ctx.moveTo(x, centerY - y);
+      ctx.lineTo(x, centerY + y);
     }
     ctx.stroke();
-    
-    // Highlight Segments
-    ctx.fillStyle = 'rgba(141, 194, 31, 0.2)'; // Brand color
-    const totalSeconds = data.length / sampleRate;
+
+    // 3. Draw Segments Highlight
+    ctx.fillStyle = 'rgba(141, 194, 31, 0.15)';
+    const totalSec = data.length / sr;
     
     detectedSegments.forEach(seg => {
-      const x = (seg.start / totalSeconds) * w;
-      const width = ((seg.end - seg.start) / totalSeconds) * w;
-      ctx.fillRect(x, 0, width, h);
+      const x = (seg.start / totalSec) * w;
+      const wid = ((seg.end - seg.start) / totalSec) * w;
+      ctx.fillRect(x, 0, wid, h);
     });
+
+    // 4. Draw Threshold Line (Blue Line)
+    // dB -> Amplitude conversion: amp = 10 ^ (dB / 20)
+    // しかし、このキャンバスはauto-scaleされているため、
+    // しきい値も「その波形の中で相対的にどのくらいか」を表示するのは難しい（RMSとPeakの違いがあるため）。
+    // ここでは簡易的に「スライダーの位置」を視覚化するだけに留める、または
+    // dBをリニアにマップして描画する。
+    // ユーザー体験としては「スライダーを下げると線が下がる」がわかりやすい。
+    
+    const thVal = parseFloat(sThreshold.value); // -60 to -10
+    // Map -60...-10 to h...0 (roughly)
+    // -60dB -> Bottom (h), 0dB -> Center (h/2) ... actually 0dB is max volume.
+    // Linear mapping for UI feedback:
+    // min: -60, max: -10. range: 50.
+    const ratio = (thVal - (-60)) / 50; // 0.0 to 1.0
+    // lineY should be near center when loud (-10), near edge when quiet (-60)
+    // amplitude 0 is at h/2. max amplitude is at 0 and h.
+    // Let's visualize the threshold relative to the wave height visually
+    
+    const lineY_top = h/2 - (h/2 * ratio);
+    const lineY_btm = h/2 + (h/2 * ratio);
+
+    ctx.beginPath();
+    ctx.strokeStyle = '#4aa3ff'; // Accent Blue
+    ctx.setLineDash([4, 4]);
+    ctx.moveTo(0, lineY_top); ctx.lineTo(w, lineY_top);
+    ctx.moveTo(0, lineY_btm); ctx.lineTo(w, lineY_btm);
+    ctx.stroke();
+    ctx.setLineDash([]);
   }
 
   waveformCanvas.addEventListener('click', (e) => {
     if(!audioBuffer) return;
     const rect = waveformCanvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const ratio = x / rect.width;
-    const time = ratio * audioBuffer.duration;
-    previewPlayer.currentTime = time;
+    const ratio = (e.clientX - rect.left) / rect.width;
+    previewPlayer.currentTime = ratio * audioBuffer.duration;
   });
 
-  // --- 6. Render List ---
-  function renderSegmentList() {
+  // --- Render List ---
+  function renderList() {
     segmentsList.innerHTML = '';
-    document.getElementById('segmentCount').innerText = `${detectedSegments.length} Found`;
+    document.getElementById('segmentCount').innerText = `${detectedSegments.length} 箇所`;
     
     detectedSegments.forEach((seg, idx) => {
-      const div = document.createElement('div');
-      div.className = 'segment-item';
-      const dur = (seg.end - seg.start).toFixed(2);
-      div.innerHTML = `
-        <span>#${idx+1}</span>
-        <span style="color:#ccc;">${seg.start.toFixed(2)}s - ${seg.end.toFixed(2)}s</span>
-        <span style="color:var(--primary);">${dur}s</span>
+      const row = document.createElement('div');
+      row.className = 'segment-row';
+      row.innerHTML = `
+        <span class="row-id">#${idx+1}</span>
+        <span class="row-time">${seg.start.toFixed(2)}s - ${seg.end.toFixed(2)}s</span>
+        <span class="row-dur">${(seg.end - seg.start).toFixed(2)}s</span>
       `;
-      div.onclick = () => {
+      row.onclick = () => {
         previewPlayer.currentTime = seg.start;
         previewPlayer.play();
       };
-      segmentsList.appendChild(div);
+      segmentsList.appendChild(row);
     });
   }
 
-  // --- 7. Preview Logic ---
+  // --- Preview ---
   previewCutBtn.addEventListener('click', () => {
+    if(detectedSegments.length === 0) return;
     isPreviewingCuts = true;
     previewCutBtn.style.display = 'none';
     stopPreviewBtn.style.display = 'inline-block';
     
-    if(detectedSegments.length > 0) {
-      previewPlayer.currentTime = detectedSegments[0].start;
-      previewPlayer.play();
-      checkPlayHead();
-    }
+    previewPlayer.currentTime = detectedSegments[0].start;
+    previewPlayer.play();
+    checkPlayHead();
   });
 
   stopPreviewBtn.addEventListener('click', () => {
     isPreviewingCuts = false;
     previewPlayer.pause();
-    previewCutBtn.style.display = 'inline-block';
     stopPreviewBtn.style.display = 'none';
+    previewCutBtn.style.display = 'inline-block';
     clearTimeout(previewTimeout);
   });
 
   function checkPlayHead() {
-    if (!isPreviewingCuts) return;
-    if (previewPlayer.paused) return;
+    if (!isPreviewingCuts || previewPlayer.paused) return;
     
     const t = previewPlayer.currentTime;
-    const currentSegIndex = detectedSegments.findIndex(s => t >= s.start && t < s.end);
+    const curIdx = detectedSegments.findIndex(s => t >= s.start && t < s.end);
     
-    if (currentSegIndex !== -1) {
-      const seg = detectedSegments[currentSegIndex];
-      const remaining = seg.end - t;
-      if (remaining < 0.1) {
-        if (currentSegIndex + 1 < detectedSegments.length) {
-          previewPlayer.currentTime = detectedSegments[currentSegIndex + 1].start;
+    if (curIdx !== -1) {
+      const seg = detectedSegments[curIdx];
+      if (seg.end - t < 0.1) {
+        if (curIdx + 1 < detectedSegments.length) {
+          previewPlayer.currentTime = detectedSegments[curIdx + 1].start;
         } else {
           stopPreviewBtn.click();
           return;
         }
       }
     } else {
-      const nextSeg = detectedSegments.find(s => s.start > t);
-      if (nextSeg) {
-        previewPlayer.currentTime = nextSeg.start;
-      } else {
-        stopPreviewBtn.click();
-        return;
-      }
+      const next = detectedSegments.find(s => s.start > t);
+      if (next) previewPlayer.currentTime = next.start;
+      else stopPreviewBtn.click();
     }
     previewTimeout = setTimeout(checkPlayHead, 50);
   }
 
-  // --- 8. Export ---
+  // --- Export ---
   exportBtn.addEventListener('click', async () => {
     if (!ffmpeg) await initFFmpeg();
-    if (!ffmpeg.isLoaded()) { alert("FFmpeg not loaded"); return; }
+    if (!ffmpeg.isLoaded()) { log("FFmpeg未ロード"); return; }
     
     exportBtn.disabled = true;
-    exportStatus.innerText = "Reading File...";
-    exportProgressBar.style.width = "5%";
-
+    setStatus("エンコード準備中...", true);
+    
     try {
       const { fetchFile } = FFmpeg;
-      const inputName = 'input.mp4';
-      const outputName = 'output.mp4';
+      const inName = 'input.mp4';
+      const outName = 'output.mp4';
       
-      ffmpeg.FS('writeFile', inputName, await fetchFile(rawFile));
+      ffmpeg.FS('writeFile', inName, await fetchFile(rawFile));
       
-      let filterStr = "";
+      // Filter Build
+      let filter = "";
       let maps = "";
-      
-      detectedSegments.forEach((seg, i) => {
-        const start = seg.start.toFixed(3);
-        const end = seg.end.toFixed(3);
-        filterStr += `[0:v]trim=start=${start}:end=${end},setpts=PTS-STARTPTS[v${i}];`;
-        filterStr += `[0:a]atrim=start=${start}:end=${end},asetpts=PTS-STARTPTS[a${i}];`;
+      detectedSegments.forEach((s, i) => {
+        const start = s.start.toFixed(3);
+        const end = s.end.toFixed(3);
+        filter += `[0:v]trim=${start}:${end},setpts=PTS-STARTPTS[v${i}];`;
+        filter += `[0:a]atrim=${start}:${end},asetpts=PTS-STARTPTS[a${i}];`;
         maps += `[v${i}][a${i}]`;
       });
-      
-      filterStr += `${maps}concat=n=${detectedSegments.length}:v=1:a=1[outv][outa]`;
-      
-      log("Encoding started...");
-      exportStatus.innerText = "Encoding Video...";
-      
+      filter += `${maps}concat=n=${detectedSegments.length}:v=1:a=1[out]`;
+
+      log("エンコード開始...");
       await ffmpeg.run(
-        '-i', inputName,
-        '-filter_complex', filterStr,
-        '-map', '[outv]', '-map', '[outa]',
+        '-i', inName,
+        '-filter_complex', filter,
+        '-map', '[out]',
         '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23',
         '-c:a', 'aac',
-        outputName
+        outName
       );
       
-      exportStatus.innerText = "Done!";
-      exportProgressBar.style.width = "100%";
+      log("エンコード完了");
+      setStatus("完了", false);
       
-      const data = ffmpeg.FS('readFile', outputName);
-      const blob = new Blob([data.buffer], { type: 'video/mp4' });
-      const url = URL.createObjectURL(blob);
+      const data = ffmpeg.FS('readFile', outName);
+      const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
       
-      downloadLink.href = url;
-      downloadLink.download = `cut_${rawFile.name}`;
-      downloadLink.style.display = 'flex';
-      downloadLink.innerHTML = `⬇ Download Result (${(blob.size/1024/1024).toFixed(1)} MB)`;
+      downloadBtn.href = url;
+      downloadBtn.download = `cut_${rawFile.name}`;
+      downloadBtn.style.display = 'block';
       
-      ffmpeg.FS('unlink', inputName);
-      ffmpeg.FS('unlink', outputName);
-      
+      ffmpeg.FS('unlink', inName); ffmpeg.FS('unlink', outName);
+
     } catch (e) {
       console.error(e);
-      log("Export Error: " + e.message);
-      exportStatus.innerText = "Export Failed";
-      exportStatus.classList.add('err');
+      log("エラー発生: " + e.message);
+      setStatus("エラー", false);
     } finally {
       exportBtn.disabled = false;
     }
