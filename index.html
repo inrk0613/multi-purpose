@@ -294,9 +294,25 @@ const logArea = document.getElementById('ffmpegLog');
 const downloadLink = document.getElementById('downloadLink');
 
 // Sliders
-const sThreshold = document.getElementById('threshold');
-const sMinDur = document.getElementById('minDuration');
-const sPadding = document.getElementById('padding');
+const updateSliderVal = (id, val, unit) => {
+  document.getElementById(id).textContent = val + unit;
+};
+
+[sThreshold, sMinDur, sPadding].forEach(el => {
+  // 1. ドラッグ中：数値の表示だけ更新（重い処理はしない）
+  el.addEventListener('input', () => {
+    updateSliderVal(el.id + 'Val', el.value, el.id === 'threshold' ? ' dB' : ' s');
+  });
+
+  // 2. 指/マウスを離した時：再計算を実行
+  el.addEventListener('change', () => {
+    // すでに音声がロード済みなら、再デコードせずに計算だけ回す
+    if(audioBuffer) {
+      log("Re-calculating segments...");
+      detectSilence(); // 解析ロジックのみ実行（高速）
+    }
+  });
+});
 
 // Status
 const analyzeStatus = document.getElementById('analyzeStatus');
