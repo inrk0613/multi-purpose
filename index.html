@@ -25,24 +25,24 @@
   <style>
     :root {
       /* --- Dark Mode Variables --- */
-      --bg-body: #050505;
-      --bg-grad-1: #151922;
+      --bg-body: #000000;
+      --bg-grad-1: #0f1219;
       --bg-grad-2: #000000;
       
-      --glass-bg: rgba(20, 25, 35, 0.75);
-      --glass-border: rgba(255, 255, 255, 0.1);
-      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+      --glass-bg: rgba(28, 28, 30, 0.65);
+      --glass-border: color-mix(in srgb, var(--primary) 16%, transparent);
+      --glass-shadow: 0 20px 40px 0 rgba(0, 0, 0, 0.6);
       
       --primary: #8DC21F;
       --primary-hover: #a3db2e;
-      --accent: #4aa3ff;
+      --accent: #60fa74;
       --danger: #ff5c5c;
       
-      --text-main: #f0f4f8;
-      --text-muted: #94a3b8;
-      --text-logo: #f0f4f8;
+      --text-main: #f5f5f7;
+      --text-muted: #86868b;
+      --text-logo: #f5f5f7;
       
-      --input-bg: rgba(0, 0, 0, 0.4);
+      --input-bg: rgba(255, 255, 255, 0.08);
       --radius: 20px;
       
       --font-base: "Noto Sans JP", "Inter", sans-serif;
@@ -56,22 +56,22 @@
       --bg-grad-2: #e0e7ff;
       
       --glass-bg: rgba(255, 255, 255, 0.75);
-      --glass-border: rgba(255, 255, 255, 0.6);
+      --glass-border: color-mix(in srgb, var(--primary) 36%, transparent);
       --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
       
       --primary: #74a813; 
       --primary-hover: #8DC21F;
-      --accent: #007aff;
+      --accent: #03a454;
       --danger: #ff3b30;
       
-      --text-main: #1c1c1e;
-      --text-muted: #636366;
+      --text-main: #1d1d1f;
+      --text-muted: #6e6e73;
       --text-logo: #595757;
       
       --input-bg: rgba(255, 255, 255, 0.6);
     }
 
-    * { box-sizing: border-box; transition: background-color 0.3s, color 0.3s, border-color 0.3s; }
+    * { box-sizing: border-box; transition: background-color 0.3s, color 0.3s, border-color 0.3s, fill 0.3s; }
 
     body {
       margin: 0;
@@ -128,7 +128,7 @@
     }
     .theme-toggle:hover { background: var(--glass-border); transform: scale(1.05); }
 
-    /* --- Layout --- */
+    /* --- Main Layout --- */
     main {
       flex: 1; display: grid;
       grid-template-columns: 450px 1fr;
@@ -136,14 +136,69 @@
       width: 100%; max-width: 1920px; margin: 0 auto;
       position: relative; z-index: 1;
     }
+
+    /* --- Mobile / Vertical Layout Adjustments --- */
     @media (max-width: 1024px) {
       body { height: auto; overflow-y: auto; }
-      main { display: flex; flex-direction: column; overflow: visible; }
-      .panel-right { order: 1; height: auto; border-bottom: 1px solid var(--glass-border); }
-      .panel-left { order: 2; height: auto; border-right: none; }
-      .preview-container { max-height: 35vh; }
+      
+      main { 
+        display: flex; 
+        flex-direction: column; 
+        overflow: visible;
+        padding-bottom: 60px;
+      }
+
+      /* Use display: contents to unwrap the panels and reorder children */
+      .panel-left, .panel-right {
+        display: contents;
+      }
+
+      /* 1. Top: File Input (Compact) */
+      .drop-zone {
+        order: 1;
+        margin: 16px 16px 10px 16px !important;
+        padding: 12px !important;
+        flex-direction: row;
+        gap: 12px;
+        align-items: center;
+        justify-content: center;
+        min-height: auto;
+      }
+      .drop-zone-icon { margin: 0 !important; width: 24px; height: 24px; }
+      .drop-zone-icon svg { width: 100%; height: 100%; }
+      .drop-zone-text { margin: 0 !important; font-size: 14px; }
+      .drop-zone div:last-child { display: none; } /* Hide sub-text */
+
+      /* 2. Preview (Below Drop Zone) */
+      .preview-container {
+        order: 2;
+        margin: 0 16px 16px 16px !important;
+        max-height: 40vh !important;
+      }
+
+      /* 3. Timeline & Controls (Middle) */
+      /* Default order for items not specified */
+      .panel-right > div, .panel-left > div {
+        order: 10;
+        margin: 0 16px 16px 16px; /* Restore margins lost by display:contents */
+      }
+      
+      /* Specific Order for Flow */
+      .panel-right > div:has(#waveformCanvas) { order: 3; }
+      .segment-list-container { order: 4; }
+      .panel-right > div:has(#previewCutBtn) { order: 5; }
+      .stats-card { order: 6; }
+      .control-group { order: 7; }
+      .log-console { order: 8; }
+
+      /* 4. Export (Bottom) */
+      .export-section {
+        order: 100;
+        margin: 16px 16px 40px 16px !important;
+      }
     }
 
+    /* Desktop Panel Styles */
     .panel-left {
       background: var(--glass-bg);
       backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
@@ -188,16 +243,18 @@
     .drop-zone-text { font-size: 15px; font-weight: 700; margin-top: 0; color: var(--text-main); }
 
     .stats-card {
-      background: linear-gradient(135deg, rgba(74, 163, 255, 0.15), rgba(74, 163, 255, 0.03));
-      border: 1px solid rgba(74, 163, 255, 0.3);
+      background: linear-gradient(135deg, rgba(34, 194, 31, 0.276), rgba(141, 194, 31, 0.02));
+      border: 1px solid color-mix(in srgb, var(--primary) 36%, transparent);
       border-radius: var(--radius);
       padding: 16px;
       display: flex; justify-content: space-between; align-items: center;
-      box-shadow: 0 4px 12px rgba(74, 163, 255, 0.1);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s;
     }
-    body:not(.light-mode) .stats-card {
-      background: linear-gradient(135deg, rgba(141, 194, 31, 0.15), rgba(141, 194, 31, 0.02));
-      border: 1px solid rgba(141, 194, 31, 0.2);
+    body.light-mode .stats-card {
+      background: linear-gradient(135deg, rgba(13, 193, 31, 0.253), rgba(74, 255, 222, 0.238));
+      border: 1px solid color-mix(in srgb, var(--primary) 36%, transparent);
+      box-shadow: 0 4px 12px rgba(74, 163, 255, 0.1);
     }
     .stat-item { text-align: center; }
     .stat-label { font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 4px; font-weight: 600; }
@@ -210,7 +267,7 @@
       background: var(--input-bg);
       border: 1px solid var(--glass-border);
       border-radius: var(--radius); padding: 24px;
-      box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+      box-shadow: inset 0 1px 1px rgba(255,255,255,0.05);
     }
     .slider-item { margin-bottom: 28px; }
     .slider-item:last-child { margin-bottom: 0; }
@@ -236,16 +293,16 @@
       width: 100%; max-width: 600px; margin: 0 auto;
       background: #000; border-radius: var(--radius);
       overflow: hidden; border: 1px solid var(--glass-border);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
       display: flex; justify-content: center; align-items: center;
       aspect-ratio: 16 / 9; flex-shrink: 0;
     }
     video { width: 100%; height: 100%; object-fit: contain; }
 
     .timeline-wrap {
-      width: 100%; background: #080808; border-radius: var(--radius);
+      width: 100%; background: #050505; border-radius: var(--radius);
       border: 1px solid var(--glass-border); height: 120px;
-      overflow: hidden; position: relative; box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+      overflow: hidden; position: relative; box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
     }
     canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
     .timeline-info {
@@ -284,9 +341,9 @@
     }
     .btn-primary { 
       background: var(--primary); color: #050505; 
-      box-shadow: 0 6px 20px rgba(141, 194, 31, 0.3);
+      box-shadow: 0 4px 20px rgba(141, 194, 31, 0.2);
     }
-    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-2px); }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 8px 25px rgba(141, 194, 31, 0.4); }
     .btn-primary:disabled { background: var(--input-bg); color: var(--text-muted); cursor: not-allowed; box-shadow: none; }
     
     .btn-secondary { 
@@ -502,7 +559,7 @@
         </div>
       </div>
       
-      <!-- Segment List (New) -->
+      <!-- Segment List -->
       <div class="segment-list-container">
         <div class="segment-list-header">
           検出された発話区間（クリックでON/OFF切替）
@@ -523,7 +580,7 @@
         </button>
       </div>
 
-      <!-- Export Section (Enhanced) -->
+      <!-- Export Section -->
       <div class="export-section">
         <select id="exportFormat" class="format-select">
           <option value="mp4">🎬 動画書き出し (.mp4)</option>
