@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <title>無音区間オートカット Pro</title>
 
   <!-- ffmpeg.wasm (CDN) -->
@@ -73,15 +73,16 @@
 
     * { box-sizing: border-box; transition: background-color 0.3s, color 0.3s, border-color 0.3s, fill 0.3s; }
 
-    html, body {
-      margin: 0; padding: 0;
-      width: 100%; height: 100%;
-      overflow-x: hidden; /* 横スクロール防止 */
+    body {
+      margin: 0;
       background: radial-gradient(circle at top left, var(--bg-grad-1), var(--bg-grad-2));
       color: var(--text-main);
       font-family: var(--font-base);
+      height: 100vh;
       display: flex;
       flex-direction: column;
+      overflow-x: hidden; /* 横スクロール防止 */
+      width: 100%;
     }
 
     .bg-orb {
@@ -111,9 +112,8 @@
       display: flex; justify-content: space-between; align-items: center;
     }
     
-    .logo { width: 220px; height: auto; transition: width 0.3s; } 
+    .logo { width: 220px; height: auto; flex-shrink: 1; } 
     .logo svg { width: 100%; height: auto; display: block; }
-    .logo .st5 { fill: var(--text-logo) !important; transition: fill 0.3s; }
 
     .icon { width: 18px; height: 18px; fill: currentColor; display: inline-block; vertical-align: middle; }
     .icon-lg { width: 32px; height: 32px; fill: currentColor; }
@@ -125,7 +125,7 @@
       color: var(--text-main);
       width: 40px; height: 40px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      cursor: pointer; transition: 0.2s;
+      cursor: pointer; transition: 0.2s; flex-shrink: 0;
     }
     .theme-toggle:hover { background: var(--glass-border); transform: scale(1.05); }
 
@@ -137,8 +137,7 @@
       width: 100%; max-width: 1920px; margin: 0 auto;
       position: relative; z-index: 1;
     }
-
-    /* PC Style Panel */
+    
     .panel-left {
       background: var(--glass-bg);
       backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
@@ -156,63 +155,68 @@
     @media (max-width: 1024px) {
       body { height: auto; overflow-y: auto; }
       
-      /* Header Adjustments */
-      header { padding: 0 16px; height: 60px; }
-      .logo { width: 160px; } /* ロゴを小さく */
+      /* Header Adjustments for Mobile */
+      header { padding: 0 16px; }
+      .logo { width: 140px; } /* Make logo smaller on mobile */
 
       main { 
         display: flex; 
         flex-direction: column; 
         overflow: visible;
         padding-bottom: 60px;
-        width: 100%;
       }
 
+      /* Reset Panel Styles for Mobile */
       .panel-left, .panel-right {
-        display: contents; /* 枠組みを解除してフラットに */
+        display: contents;
+        padding: 0; border: none; background: none;
       }
 
-      /* 共通: 幅を100%ではなくautoにし、マージンで調整 */
-      .drop-zone, .preview-container, .waveform-container, .stats-card, 
-      .control-group, .preview-controls, .segment-list-container, 
-      .log-console, .export-section {
-        width: auto !important;
-        margin-left: 16px !important;
-        margin-right: 16px !important;
-        margin-bottom: 16px !important;
-      }
-
-      /* 1. Top: File Input */
+      /* 1. Top: File Input (Compact) */
       .drop-zone {
         order: 1;
-        margin-top: 16px !important;
+        margin: 16px 16px 10px 16px !important;
         padding: 12px !important;
-        flex-direction: row; gap: 12px; align-items: center; justify-content: center;
+        flex-direction: row;
+        gap: 12px;
+        align-items: center;
+        justify-content: center;
         min-height: auto;
       }
       .drop-zone-icon { margin: 0 !important; width: 24px; height: 24px; }
       .drop-zone-icon svg { width: 100%; height: 100%; }
       .drop-zone-text { margin: 0 !important; font-size: 13px; }
-      .drop-zone div:last-child { display: none; }
+      .drop-zone div:last-child { display: none; } /* Hide sub-text */
 
-      /* 2. Preview */
+      /* 2. Preview (Below Drop Zone) */
       .preview-container {
         order: 2;
+        margin: 0 16px 16px 16px !important;
         max-height: 40vh !important;
+        width: calc(100% - 32px) !important; /* Ensure padding respect */
       }
 
-      /* 3. Others Order */
-      .waveform-container { order: 3; }
-      .stats-card { order: 4; }
-      .control-group { order: 5; }
-      .preview-controls { order: 6; }
-      .segment-list-container { order: 7; }
-      .log-console { order: 8; }
+      /* 3. Timeline & Controls (Middle) */
+      /* Default order for items not specified */
+      .panel-right > div, .panel-left > div {
+        order: 10;
+        margin: 0 16px 16px 16px;
+        width: calc(100% - 32px); /* Prevent overflow */
+      }
       
+      /* Specific Order for Flow */
+      .panel-right > div:has(#waveformCanvas) { order: 3; }
+      .segment-list-container { order: 4; }
+      .panel-right > div:has(#previewCutBtn) { order: 5; }
+      .stats-card { order: 6; }
+      .control-group { order: 7; }
+      .log-console { order: 8; }
+
       /* 9. Export (Bottom) */
       .export-section {
         order: 100;
-        margin-bottom: 40px !important;
+        margin: 16px 16px 40px 16px !important;
+        width: calc(100% - 32px) !important;
       }
     }
 
@@ -297,7 +301,7 @@
       width: 100%; max-width: 600px; margin: 0 auto;
       background: #000; border-radius: var(--radius);
       overflow: hidden; border: 1px solid var(--glass-border);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
       display: flex; justify-content: center; align-items: center;
       aspect-ratio: 16 / 9; flex-shrink: 0;
     }
@@ -345,7 +349,7 @@
     }
     .btn-primary { 
       background: var(--primary); color: #050505; 
-      box-shadow: 0 4px 20px rgba(141, 194, 31, 0.2);
+      box-shadow: 0 6px 20px rgba(141, 194, 31, 0.3);
     }
     .btn-primary:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-2px); }
     .btn-primary:disabled { background: var(--input-bg); color: var(--text-muted); cursor: not-allowed; box-shadow: none; }
@@ -476,6 +480,7 @@
     <!-- Left Panel -->
     <div class="panel-left">
       
+      <!-- 1. Drop Zone -->
       <label class="drop-zone">
         <input type="file" id="fileInput" accept="video/*,audio/*" style="display:none;">
         <div class="drop-zone-icon">
@@ -485,6 +490,7 @@
         <div style="font-size:12px; color:var(--text-muted); margin-top:6px;">タップ または ドラッグ＆ドロップ</div>
       </label>
 
+      <!-- 4. Stats -->
       <div class="stats-card">
         <div class="stat-item">
           <span class="stat-label">元動画</span>
@@ -503,6 +509,7 @@
         </div>
       </div>
 
+      <!-- 5. Controls -->
       <div class="control-group">
         <h2>
           <svg class="icon" viewBox="0 0 24 24"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>
@@ -542,17 +549,19 @@
         </button>
       </div>
       
-      <!-- Log Console -->
+      <!-- 8. Logs -->
       <div class="log-console" id="logConsole">System Ready...</div>
     </div>
 
     <!-- Right Panel -->
     <div class="panel-right">
       
+      <!-- 2. Preview -->
       <div class="preview-container">
         <video id="previewPlayer" playsinline controls></video>
       </div>
 
+      <!-- 3. Waveform -->
       <div class="waveform-container">
         <div class="timeline-wrap">
           <canvas id="waveformCanvas" title="クリックでシーク"></canvas>
@@ -563,7 +572,7 @@
         </div>
       </div>
       
-      <!-- Segment List -->
+      <!-- 7. Segment List -->
       <div class="segment-list-container">
         <div class="segment-list-header">
           検出された発話区間（クリックでON/OFF切替）
@@ -573,6 +582,7 @@
         </div>
       </div>
 
+      <!-- 6. Preview Controls -->
       <div class="preview-controls" style="display:flex; gap:16px;">
         <button id="previewCutBtn" class="btn btn-secondary" disabled>
           <svg class="icon icon-btn" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
@@ -584,7 +594,7 @@
         </button>
       </div>
 
-      <!-- Export Section -->
+      <!-- 9. Export (Bottom) -->
       <div class="export-section">
         <select id="exportFormat" class="format-select">
           <option value="mp4">🎬 動画書き出し (.mp4)</option>
