@@ -128,7 +128,7 @@
     }
     .theme-toggle:hover { background: var(--glass-border); transform: scale(1.05); }
 
-    /* --- Main Layout --- */
+    /* --- Layout --- */
     main {
       flex: 1; display: grid;
       grid-template-columns: 450px 1fr;
@@ -136,8 +136,21 @@
       width: 100%; max-width: 1920px; margin: 0 auto;
       position: relative; z-index: 1;
     }
+    
+    .panel-left {
+      background: var(--glass-bg);
+      backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+      border-right: 1px solid var(--glass-border);
+      padding: 32px; display: flex; flex-direction: column; gap: 28px;
+      overflow-y: auto;
+    }
+    .panel-right {
+      background: rgba(0,0,0,0.02); padding: 32px;
+      display: flex; flex-direction: column; gap: 20px;
+      overflow-y: auto;
+    }
 
-    /* --- Mobile / Vertical Layout Adjustments --- */
+    /* === Mobile / Vertical Layout Optimization === */
     @media (max-width: 1024px) {
       body { height: auto; overflow-y: auto; }
       
@@ -148,12 +161,14 @@
         padding-bottom: 60px;
       }
 
-      /* Use display: contents to unwrap the panels and reorder children */
+      /* パネルの枠組みを解除して中身をフラットに並べる */
       .panel-left, .panel-right {
         display: contents;
       }
 
-      /* 1. Top: File Input (Compact) */
+      /* 各要素の表示順序 (Order) を再定義 */
+      
+      /* 1. ファイル選択 (最上部・コンパクト化) */
       .drop-zone {
         order: 1;
         margin: 16px 16px 10px 16px !important;
@@ -167,49 +182,56 @@
       .drop-zone-icon { margin: 0 !important; width: 24px; height: 24px; }
       .drop-zone-icon svg { width: 100%; height: 100%; }
       .drop-zone-text { margin: 0 !important; font-size: 14px; }
-      .drop-zone div:last-child { display: none; } /* Hide sub-text */
+      .drop-zone div:last-child { display: none; } /* 「タップまたは...」を非表示 */
 
-      /* 2. Preview (Below Drop Zone) */
+      /* 2. プレビュー画面 */
       .preview-container {
         order: 2;
         margin: 0 16px 16px 16px !important;
         max-height: 40vh !important;
       }
 
-      /* 3. Timeline & Controls (Middle) */
-      /* Default order for items not specified */
-      .panel-right > div, .panel-left > div {
-        order: 10;
-        margin: 0 16px 16px 16px; /* Restore margins lost by display:contents */
+      /* 3. 波形タイムライン */
+      .waveform-container { 
+        order: 3; 
+        margin: 0 16px 16px 16px;
       }
-      
-      /* Specific Order for Flow */
-      .panel-right > div:has(#waveformCanvas) { order: 3; }
-      .segment-list-container { order: 4; }
-      .panel-right > div:has(#previewCutBtn) { order: 5; }
-      .stats-card { order: 6; }
-      .control-group { order: 7; }
-      .log-console { order: 8; }
 
-      /* 4. Export (Bottom) */
+      /* 4. 統計情報 (Stats) */
+      .stats-card { 
+        order: 4; 
+        margin: 0 16px 16px 16px;
+      }
+
+      /* 5. パラメータ調整 */
+      .control-group { 
+        order: 5; 
+        margin: 0 16px 16px 16px;
+      }
+
+      /* 6. 再生コントロール */
+      .preview-controls { 
+        order: 6; 
+        margin: 0 16px 16px 16px;
+      }
+
+      /* 7. 区間リスト */
+      .segment-list-container { 
+        order: 7; 
+        margin: 0 16px 16px 16px;
+      }
+
+      /* 8. ログ */
+      .log-console { 
+        order: 8; 
+        margin: 0 16px 16px 16px;
+      }
+
+      /* 9. 書き出し (最下部) */
       .export-section {
         order: 100;
         margin: 16px 16px 40px 16px !important;
       }
-    }
-
-    /* Desktop Panel Styles */
-    .panel-left {
-      background: var(--glass-bg);
-      backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
-      border-right: 1px solid var(--glass-border);
-      padding: 32px; display: flex; flex-direction: column; gap: 28px;
-      overflow-y: auto;
-    }
-    .panel-right {
-      background: rgba(0,0,0,0.02); padding: 32px;
-      display: flex; flex-direction: column; gap: 20px;
-      overflow-y: auto;
     }
 
     h2 {
@@ -341,9 +363,9 @@
     }
     .btn-primary { 
       background: var(--primary); color: #050505; 
-      box-shadow: 0 4px 20px rgba(141, 194, 31, 0.2);
+      box-shadow: 0 6px 20px rgba(141, 194, 31, 0.3);
     }
-    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 8px 25px rgba(141, 194, 31, 0.4); }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-2px); }
     .btn-primary:disabled { background: var(--input-bg); color: var(--text-muted); cursor: not-allowed; box-shadow: none; }
     
     .btn-secondary { 
@@ -388,7 +410,7 @@
       overflow-y: auto; margin-top: auto; line-height: 1.4;
     }
 
-    /* Help Modal (Liquid Glass) */
+    /* Help Modal */
     @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
     .modal-overlay {
       position: fixed; inset: 0; z-index: 1000;
@@ -472,6 +494,7 @@
     <!-- Left Panel -->
     <div class="panel-left">
       
+      <!-- 1. Drop Zone -->
       <label class="drop-zone">
         <input type="file" id="fileInput" accept="video/*,audio/*" style="display:none;">
         <div class="drop-zone-icon">
@@ -481,6 +504,7 @@
         <div style="font-size:12px; color:var(--text-muted); margin-top:6px;">タップ または ドラッグ＆ドロップ</div>
       </label>
 
+      <!-- 4. Stats -->
       <div class="stats-card">
         <div class="stat-item">
           <span class="stat-label">元動画</span>
@@ -499,6 +523,7 @@
         </div>
       </div>
 
+      <!-- 5. Controls -->
       <div class="control-group">
         <h2>
           <svg class="icon" viewBox="0 0 24 24"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>
@@ -538,18 +563,20 @@
         </button>
       </div>
       
-      <!-- Log Console -->
+      <!-- 8. Logs -->
       <div class="log-console" id="logConsole">System Ready...</div>
     </div>
 
     <!-- Right Panel -->
     <div class="panel-right">
       
+      <!-- 2. Preview -->
       <div class="preview-container">
         <video id="previewPlayer" playsinline controls></video>
       </div>
 
-      <div>
+      <!-- 3. Waveform -->
+      <div class="waveform-container">
         <div class="timeline-wrap">
           <canvas id="waveformCanvas" title="クリックでシーク"></canvas>
         </div>
@@ -559,7 +586,7 @@
         </div>
       </div>
       
-      <!-- Segment List -->
+      <!-- 7. Segment List -->
       <div class="segment-list-container">
         <div class="segment-list-header">
           検出された発話区間（クリックでON/OFF切替）
@@ -569,7 +596,8 @@
         </div>
       </div>
 
-      <div style="display:flex; gap:16px;">
+      <!-- 6. Preview Controls -->
+      <div class="preview-controls" style="display:flex; gap:16px;">
         <button id="previewCutBtn" class="btn btn-secondary" disabled>
           <svg class="icon icon-btn" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
           カット後のプレビュー
@@ -580,7 +608,7 @@
         </button>
       </div>
 
-      <!-- Export Section -->
+      <!-- 9. Export (Bottom) -->
       <div class="export-section">
         <select id="exportFormat" class="format-select">
           <option value="mp4">🎬 動画書き出し (.mp4)</option>
