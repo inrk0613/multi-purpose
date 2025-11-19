@@ -1,21 +1,17 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <!-- PWA / アイコン関連 -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>無音区間オートカット Pro</title>
+
+  <!-- PWA / アイコン関連 -->
   <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
   <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png" />
   <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16.png" />
-
-      <meta name="apple-mobile-web-app-title" content="ミュートカット">
+  <meta name="apple-mobile-web-app-title" content="ミュートカット">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
-    
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-
-    
-  <title>Sアカデミー無音区間オートカット</title>
 
   <!-- ffmpeg.wasm (CDN) -->
   <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
@@ -93,7 +89,7 @@
       height: 100vh;
       display: flex;
       flex-direction: column;
-      overflow-x: hidden; /* 横スクロール防止 */
+      overflow-x: hidden;
       width: 100%;
     }
 
@@ -126,6 +122,7 @@
     
     .logo { width: 220px; height: auto; flex-shrink: 1; } 
     .logo svg { width: 100%; height: auto; display: block; }
+    .logo .st5 { fill: var(--text-logo) !important; transition: fill 0.3s; }
 
     .icon { width: 18px; height: 18px; fill: currentColor; display: inline-block; vertical-align: middle; }
     .icon-lg { width: 32px; height: 32px; fill: currentColor; }
@@ -166,10 +163,8 @@
     /* === Mobile / Vertical Layout Optimization === */
     @media (max-width: 1024px) {
       body { height: auto; overflow-y: auto; }
-      
-      /* Header Adjustments for Mobile */
       header { padding: 0 16px; }
-      .logo { width: 140px; } /* Make logo smaller on mobile */
+      .logo { width: 140px; }
 
       main { 
         display: flex; 
@@ -178,45 +173,38 @@
         padding-bottom: 60px;
       }
 
-      /* Reset Panel Styles for Mobile */
       .panel-left, .panel-right {
         display: contents;
-        padding: 0; border: none; background: none;
       }
 
-      /* 1. Top: File Input (Compact) */
+      /* 1. Top: File Input */
       .drop-zone {
         order: 1;
         margin: 16px 16px 10px 16px !important;
         padding: 12px !important;
-        flex-direction: row;
-        gap: 12px;
-        align-items: center;
-        justify-content: center;
+        flex-direction: row; gap: 12px; align-items: center; justify-content: center;
         min-height: auto;
       }
       .drop-zone-icon { margin: 0 !important; width: 24px; height: 24px; }
       .drop-zone-icon svg { width: 100%; height: 100%; }
       .drop-zone-text { margin: 0 !important; font-size: 13px; }
-      .drop-zone div:last-child { display: none; } /* Hide sub-text */
+      .drop-zone div:last-child { display: none; }
 
-      /* 2. Preview (Below Drop Zone) */
+      /* 2. Preview */
       .preview-container {
         order: 2;
         margin: 0 16px 16px 16px !important;
         max-height: 40vh !important;
-        width: calc(100% - 32px) !important; /* Ensure padding respect */
+        width: calc(100% - 32px) !important;
       }
 
-      /* 3. Timeline & Controls (Middle) */
-      /* Default order for items not specified */
+      /* 3-8. Controls & Timeline */
       .panel-right > div, .panel-left > div {
         order: 10;
         margin: 0 16px 16px 16px;
-        width: calc(100% - 32px); /* Prevent overflow */
+        width: calc(100% - 32px);
       }
       
-      /* Specific Order for Flow */
       .panel-right > div:has(#waveformCanvas) { order: 3; }
       .segment-list-container { order: 4; }
       .panel-right > div:has(#previewCutBtn) { order: 5; }
@@ -224,7 +212,7 @@
       .control-group { order: 7; }
       .log-console { order: 8; }
 
-      /* 9. Export (Bottom) */
+      /* 9. Export */
       .export-section {
         order: 100;
         margin: 16px 16px 40px 16px !important;
@@ -232,7 +220,7 @@
       }
     }
 
-    h2,h3,h4 {
+    h2 {
       margin: 0 0 16px; font-size: 14px; font-weight: 700;
       color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em;
       display: flex; align-items: center; gap: 10px;
@@ -330,7 +318,6 @@
       font-size: 10px; color: var(--text-muted); margin-top: 4px; padding: 0 4px;
     }
 
-    /* Segment List */
     .segment-list-container {
       flex: 1; min-height: 120px;
       background: var(--input-bg); border: 1px solid var(--glass-border);
@@ -361,7 +348,7 @@
     }
     .btn-primary { 
       background: var(--primary); color: #050505; 
-      box-shadow: 0 6px 20px rgba(141, 194, 31, 0.3);
+      box-shadow: 0 4px 20px rgba(141, 194, 31, 0.2);
     }
     .btn-primary:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-2px); }
     .btn-primary:disabled { background: var(--input-bg); color: var(--text-muted); cursor: not-allowed; box-shadow: none; }
@@ -378,7 +365,6 @@
       border: 1px solid var(--glass-border); border-radius: var(--radius); padding: 20px; margin-top: auto;
     }
     
-    /* Format Selector */
     .format-select {
       width: 100%; padding: 12px; border-radius: 12px;
       background: var(--input-bg); border: 1px solid var(--glass-border);
@@ -408,7 +394,7 @@
       overflow-y: auto; margin-top: auto; line-height: 1.4;
     }
 
-    /* Help Modal (Liquid Glass) */
+    /* --- Help Modal (Liquid Glass Style) --- */
     @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
     .modal-overlay {
       position: fixed; inset: 0; z-index: 1000;
@@ -456,10 +442,10 @@
     }
     .modal-body::-webkit-scrollbar { width: 6px; }
     .modal-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
-    .modal-body h3 { margin-top: 0; color: #fff; font-size: 18px; border-left: 4px solid rgba(255,255,255,0.8); padding-left: 12px; margin-bottom: 16px; }
-    .modal-body h4 { margin: 24px 0 10px; color: #fff; font-size: 15px; font-weight: 700; opacity: 0.9; }
-    .modal-body p { margin: 0 0 16px; color: rgba(255,255,255,0.9); }
-    .modal-body ul { padding-left: 20px; color: rgba(255,255,255,0.85); margin-bottom: 20px; }
+    .modal-body h3 { margin-top: 0; color: #fff; font-size: 18px; border-left: 4px solid rgba(255,255,255,0.8); padding-left: 12px; margin-bottom: 12px; }
+    .modal-body h4 { margin: 16px 0 8px; color: #fff; font-size: 15px; font-weight: 700; opacity: 0.9; }
+    .modal-body p { margin: 0 0 12px; color: rgba(255,255,255,0.9); }
+    .modal-body ul { padding-left: 20px; color: rgba(255,255,255,0.85); margin-bottom: 12px; }
     .modal-body strong { color: #fff; font-weight: 700; text-decoration: underline decoration-thickness 1px; text-underline-offset: 2px; }
   </style>
 </head>
@@ -492,7 +478,6 @@
     <!-- Left Panel -->
     <div class="panel-left">
       
-      <!-- 1. Drop Zone -->
       <label class="drop-zone">
         <input type="file" id="fileInput" accept="video/*,audio/*" style="display:none;">
         <div class="drop-zone-icon">
@@ -502,7 +487,6 @@
         <div style="font-size:12px; color:var(--text-muted); margin-top:6px;">タップ または ドラッグ＆ドロップ</div>
       </label>
 
-      <!-- 4. Stats -->
       <div class="stats-card">
         <div class="stat-item">
           <span class="stat-label">元動画</span>
@@ -521,7 +505,6 @@
         </div>
       </div>
 
-      <!-- 5. Controls -->
       <div class="control-group">
         <h2>
           <svg class="icon" viewBox="0 0 24 24"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>
@@ -561,20 +544,18 @@
         </button>
       </div>
       
-      <!-- 8. Logs -->
+      <!-- Log Console -->
       <div class="log-console" id="logConsole">System Ready...</div>
     </div>
 
     <!-- Right Panel -->
     <div class="panel-right">
       
-      <!-- 2. Preview -->
       <div class="preview-container">
         <video id="previewPlayer" playsinline controls></video>
       </div>
 
-      <!-- 3. Waveform -->
-      <div class="waveform-container">
+      <div>
         <div class="timeline-wrap">
           <canvas id="waveformCanvas" title="クリックでシーク"></canvas>
         </div>
@@ -584,7 +565,7 @@
         </div>
       </div>
       
-      <!-- 7. Segment List -->
+      <!-- Segment List -->
       <div class="segment-list-container">
         <div class="segment-list-header">
           検出された発話区間（クリックでON/OFF切替）
@@ -594,8 +575,7 @@
         </div>
       </div>
 
-      <!-- 6. Preview Controls -->
-      <div class="preview-controls" style="display:flex; gap:16px;">
+      <div style="display:flex; gap:16px;">
         <button id="previewCutBtn" class="btn btn-secondary" disabled>
           <svg class="icon icon-btn" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
           カット後のプレビュー
@@ -606,7 +586,7 @@
         </button>
       </div>
 
-      <!-- 9. Export (Bottom) -->
+      <!-- Export Section -->
       <div class="export-section">
         <select id="exportFormat" class="format-select">
           <option value="mp4">🎬 動画書き出し (.mp4)</option>
@@ -638,7 +618,7 @@
     </div>
   </main>
 
-<!-- Help Modal -->
+  <!-- Help Modal -->
   <div id="helpModal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
@@ -647,42 +627,28 @@
       </div>
       <div class="modal-body">
         <h3>1. はじめに</h3>
-        <p>動画や音声ファイルから「無音（話していない区間）」を自動検出してカットするツールです。すべての処理はブラウザ内で行われ、外部サーバーへのアップロードは発生しません。</p>
-code
-Code
-<h3>2. 基本的な使い方</h3>
-    <h4>ステップ1：ファイルを読み込む</h4>
-    <p>左上の「動画ファイルを選択」エリアをタップするか、ファイルをドロップします。</p>
-    
-    <h4>ステップ2：パラメータ調整</h4>
-    <ul>
-      <li><strong>しきい値:</strong> この値より小さい音を「無音」とみなします。</li>
-      <li><strong>最短発話時間:</strong> 短すぎる音（ノイズ等）を無視します。</li>
-      <li><strong>前後の余白:</strong> 自然な繋がりのために余韻を残します。</li>
-    </ul>
-    
-    <h4>ステップ3：解析と確認</h4>
-    <p>「音量を解析」ボタンを押すと、波形と予想時間が表示されます。「カット後のプレビュー再生」で確認できます。</p>
-    
-    <h4>ステップ4：書き出し</h4>
-    <p>「書き出し & 自動保存」を押すと、編集された動画が作成され自動的にダウンロードされます。</p>
-    
-    <h3>3. トラブルシューティング</h3>
-    <p><strong>解析できない場合:</strong> 別のファイル形式を試すか、ページをリロードしてください。4Kなどの高解像度動画はメモリ不足になる場合があります。</p>
+        <p>動画や音声ファイルから「無音」を自動検出してカットするツールです。処理はすべてブラウザ内で行われます。</p>
+        
+        <h3>2. 新機能 (Pro)</h3>
+        <ul>
+          <li><strong>個別カット編集:</strong> リストをクリックすると、その区間を使うか捨てるかを手動で切り替えられます。</li>
+          <li><strong>XML書き出し:</strong> 「編集ファイル書き出し」を選ぶと、Premiere ProやDaVinci Resolve用のEDLファイルを一瞬で作成します。画質劣化なしで最強です。</li>
+          <li><strong>音声のみ:</strong> 会議の議事録用に音声だけを軽く書き出せます。</li>
+        </ul>
 
-    <h3>3. 基本手順</h3>
-    <h4>ステップ1：ファイルを読み込む</h4>
-　　　<p>左上のエリアに動画をドロップします。</p>　
-　　　<h4>ステップ2：パラメータ調整</h4>
-　　　<p>しきい値や発話時間を調整し「音量を解析」を押します。</p>
-　　　<h4>ステップ3：書き出し</h4>
-　　　<p>形式（動画/音声/編集ファイル）を選んで「書き出し」を押します。</p>
+        <h3>3. 基本手順</h3>
+        <h4>ステップ1：ファイルを読み込む</h4>
+        <p>左上のエリアに動画をドロップします。</p>
+        <h4>ステップ2：パラメータ調整</h4>
+        <p>しきい値や発話時間を調整し「音量を解析」を押します。</p>
+        <h4>ステップ3：書き出し</h4>
+        <p>形式（動画/音声/編集ファイル）を選んで「書き出し」を押します。</p>
 
-    <h3>4. コード改変に関して</h3>
-    <p>本アプリはGithubを使用しています。そのためリポジトリにアクセスできる場合には簡単にコードの書き換えが可能です。もしアップデート等を行う際には必ず書き換え前の状態をすぐに参照できるようにして下さい。</p>
-    <p>プロジェクトファイルはすべて井口フォルダ内「Mutecut」フォルダに保管しています。</p>
-  </div>
-</div>
+        <h3>4. コード改変に関して</h3>
+        <p>本アプリはGithubを使用しています。そのためリポジトリにアクセスできる場合には簡単にコードの書き換えが可能です。もしアップデート等を行う際には必ず書き換え前の状態をすぐに参照できるようにして下さい。</p>
+        <p>プロジェクトファイルはすべて井口フォルダ内「Mutecut」フォルダに保管しています。</p>
+      </div>
+    </div>
   </div>
 
   <script>
