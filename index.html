@@ -1,0 +1,1847 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1220" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icons/icon-192.png" />
+  <title>ClassFlow — 映像授業 視聴管理</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --bg2:#0f172a;
+      --card:rgba(255,255,255,.06);
+      --card2:rgba(255,255,255,.09);
+      --stroke:rgba(255,255,255,.10);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.66);
+      --muted2:rgba(255,255,255,.48);
+      --accent:#5eead4;
+      --accent2:#60a5fa;
+      --danger:#fb7185;
+      --ok:#34d399;
+      --warn:#fbbf24;
+      --radius:18px;
+      --shadow: 0 18px 50px rgba(0,0,0,.45);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", "Meiryo", Arial, sans-serif;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      color:var(--text);
+      background:
+        radial-gradient(1200px 700px at 10% 0%, rgba(96,165,250,.20), transparent 55%),
+        radial-gradient(900px 600px at 95% 10%, rgba(94,234,212,.16), transparent 55%),
+        radial-gradient(900px 800px at 60% 120%, rgba(251,113,133,.12), transparent 55%),
+        linear-gradient(180deg, var(--bg), var(--bg2));
+      overflow-x:hidden;
+    }
+    a{color:inherit}
+    .wrap{max-width:1100px;margin:0 auto;padding:22px 18px 64px}
+    .topbar{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:14px;
+      position:sticky; top:0;
+      padding:14px 0 12px;
+      backdrop-filter: blur(14px);
+      z-index:10;
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      font-weight:700; letter-spacing:.2px;
+    }
+    .logo{
+      width:34px;height:34px;border-radius:12px;
+      background: linear-gradient(135deg, rgba(96,165,250,.95), rgba(94,234,212,.95));
+      box-shadow: 0 14px 30px rgba(0,0,0,.28);
+      position:relative;
+      overflow:hidden;
+    }
+    .logo:after{
+      content:"";
+      position:absolute; inset:-20px;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.75), transparent 45%);
+      transform: rotate(20deg);
+      opacity:.55;
+    }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:9px 12px;
+      border:1px solid var(--stroke);
+      border-radius:999px;
+      background: rgba(255,255,255,.03);
+    }
+    .pill b{font-weight:700}
+    .grid{
+      display:grid; grid-template-columns: 1.2fr .8fr;
+      gap:16px;
+    }
+    @media (max-width: 920px){
+      .grid{grid-template-columns:1fr}
+    }
+    .card{
+      border:1px solid var(--stroke);
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card .hd{
+      padding:16px 16px 12px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), transparent);
+    }
+    .card .bd{padding:16px}
+    .title{font-size:18px;font-weight:750;letter-spacing:.2px}
+    .sub{color:var(--muted);font-size:13px;line-height:1.5}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .stack{display:flex;flex-direction:column;gap:10px}
+    .btn{
+      appearance:none;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.04);
+      color:var(--text);
+      padding:11px 14px;
+      border-radius: 14px;
+      cursor:pointer;
+      transition: transform .04s ease, background .2s ease, border-color .2s ease;
+      user-select:none;
+      font-weight:650;
+      letter-spacing:.2px;
+    }
+    .btn:hover{background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.16)}
+    .btn:active{transform: translateY(1px)}
+    .btn.primary{
+      border-color: rgba(94,234,212,.35);
+      background: linear-gradient(135deg, rgba(94,234,212,.18), rgba(96,165,250,.14));
+    }
+    .btn.danger{
+      border-color: rgba(251,113,133,.40);
+      background: rgba(251,113,133,.12);
+      color: rgba(255,255,255,.96);
+    }
+    .btn.ghost{background: transparent}
+    .btn.small{padding:8px 10px;border-radius:12px;font-weight:650;font-size:13px}
+    .btn.wide{width:100%}
+    .input, textarea, select{
+      width:100%;
+      padding:12px 12px;
+      border-radius: 14px;
+      border:1px solid var(--stroke);
+      background: rgba(0,0,0,.20);
+      color:var(--text);
+      outline:none;
+      font-size:14px;
+    }
+    textarea{min-height:100px; resize: vertical}
+    label{font-size:13px;color:var(--muted);display:block;margin:2px 0 6px}
+    .kpi{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap:12px;
+    }
+    @media (max-width: 680px){ .kpi{grid-template-columns:1fr} }
+    .kpi .box{
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      border-radius: 16px;
+      padding:12px;
+    }
+    .kpi .num{font-weight:800;font-size:20px}
+    .kpi .lab{color:var(--muted);font-size:12px;margin-top:4px}
+    .tabs{
+      display:flex;gap:8px;flex-wrap:wrap;
+      padding:10px 16px 0;
+    }
+    .tab{
+      padding:9px 12px;border-radius:999px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.03);
+      color:var(--muted);
+      cursor:pointer;
+      font-weight:700;
+      font-size:13px;
+    }
+    .tab.active{
+      color:var(--text);
+      border-color: rgba(94,234,212,.35);
+      background: rgba(94,234,212,.10);
+    }
+    .list{display:flex;flex-direction:column;gap:10px}
+    .item{
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      border-radius: 16px;
+      padding:12px;
+      display:flex; gap:12px; align-items:flex-start; justify-content:space-between;
+    }
+    .item .meta{min-width:0}
+    .item .meta .h{font-weight:800}
+    .item .meta .m{color:var(--muted);font-size:12px;margin-top:4px;line-height:1.4}
+    .badge{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:6px 10px;border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.16);
+      color:var(--muted);
+      font-size:12px;
+      white-space:nowrap;
+    }
+    .badge.ok{border-color: rgba(52,211,153,.35); color: rgba(209,250,229,.9); background: rgba(52,211,153,.10)}
+    .badge.warn{border-color: rgba(251,191,36,.35); color: rgba(254,243,199,.92); background: rgba(251,191,36,.10)}
+    .badge.danger{border-color: rgba(251,113,133,.40); color: rgba(255,228,230,.92); background: rgba(251,113,133,.10)}
+    .hr{height:1px;background:rgba(255,255,255,.08);margin:12px 0}
+    .hint{font-size:12px;color:var(--muted2);line-height:1.5}
+    .mono{font-family:var(--mono)}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width: 760px){ .two{grid-template-columns:1fr} }
+    .toast{
+      position:fixed;
+      left:50%; bottom:18px; transform:translateX(-50%);
+      background: rgba(0,0,0,.52);
+      border:1px solid rgba(255,255,255,.14);
+      padding:10px 12px;
+      border-radius: 14px;
+      backdrop-filter: blur(12px);
+      color: rgba(255,255,255,.92);
+      max-width:min(520px, calc(100% - 24px));
+      box-shadow: 0 18px 50px rgba(0,0,0,.45);
+      display:none;
+      z-index: 1000;
+    }
+    .toast.show{display:block; animation: pop .18s ease-out}
+    @keyframes pop{from{opacity:0; transform: translateX(-50%) translateY(8px)}to{opacity:1; transform: translateX(-50%) translateY(0)}}
+    .modal{
+      position:fixed; inset:0;
+      background: rgba(0,0,0,.55);
+      display:none;
+      align-items:center; justify-content:center;
+      padding:18px;
+      z-index: 999;
+    }
+    .modal.show{display:flex}
+    .modal .panel{
+      width:min(720px, 100%);
+      border-radius: 20px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(10,16,26,.92);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      backdrop-filter: blur(12px);
+    }
+    .modal .panel .hd{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.10);display:flex;justify-content:space-between;align-items:center}
+    .modal .panel .bd{padding:16px}
+    canvas{width:100%; height:240px; border-radius: 16px; border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.03)}
+    .footer{
+      margin-top:18px;
+      color: var(--muted2);
+      font-size:12px;
+      line-height:1.6;
+    }
+    .kbd{
+      font-family:var(--mono);
+      font-size:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      padding:2px 6px;
+      border-radius: 8px;
+      color: rgba(255,255,255,.85);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand" aria-label="ClassFlow">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <div style="display:flex;align-items:baseline;gap:10px">
+            <div style="font-size:16px;font-weight:800">ClassFlow</div>
+            <div class="badge mono" id="buildTag">v1.0</div>
+          </div>
+          <div class="sub">GitHub Pages / 完全オフライン運用・暗号化対応</div>
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn small ghost" id="installBtn" style="display:none">インストール</button>
+        <button class="btn small" id="lockBtn" style="display:none">ロック</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card" id="mainCard">
+        <div class="hd">
+          <div>
+            <div class="title" id="mainTitle">ようこそ</div>
+            <div class="sub" id="mainSub">講師 / 生徒 それぞれの権限をオフラインで安全に実現します。</div>
+          </div>
+          <div class="row">
+            <span class="badge" id="modeBadge">未ログイン</span>
+          </div>
+        </div>
+
+        <div class="tabs" id="tabs" style="display:none"></div>
+        <div class="bd" id="main"></div>
+      </div>
+
+      <div class="card">
+        <div class="hd">
+          <div>
+            <div class="title">クイック</div>
+            <div class="sub">運用のための要点（必読）</div>
+          </div>
+          <span class="badge warn">重要</span>
+        </div>
+        <div class="bd">
+          <div class="stack">
+            <div class="item">
+              <div class="meta">
+                <div class="h">完全無料・サーバー無し</div>
+                <div class="m">データ共有は「暗号化ファイルのエクスポート/インポート」で実現します（GitHub Pages でも動作）。</div>
+              </div>
+              <span class="badge">設計</span>
+            </div>
+            <div class="item">
+              <div class="meta">
+                <div class="h">プライバシー第一</div>
+                <div class="m">生徒情報は原則「生徒コード」で管理（本名は入力不要）。ローカル保存は暗号化されます。</div>
+              </div>
+              <span class="badge ok">暗号化</span>
+            </div>
+            <div class="item">
+              <div class="meta">
+                <div class="h">推奨運用</div>
+                <div class="m">講師：クラスDBを保持。生徒：招待ファイルを取り込み → 更新ファイルを提出。講師が取り込み、全体を集約。</div>
+              </div>
+              <span class="badge">フロー</span>
+            </div>
+            <div class="item">
+              <div class="meta">
+                <div class="h">バックアップ</div>
+                <div class="m">講師は定期的にクラスDB（暗号化）をエクスポートして保管してください。</div>
+              </div>
+              <span class="badge danger">必須</span>
+            </div>
+
+            <div class="hr"></div>
+            <div class="hint">
+              ヒント: iOS/Safari は PWA でストレージが掃除されることがあります。<br/>
+              講師は「暗号化クラスDBのエクスポート」を習慣化してください。
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div>ショートカット: <span class="kbd">Ctrl</span> / <span class="kbd">⌘</span> + <span class="kbd">K</span> で検索、<span class="kbd">Esc</span> でモーダル閉じる。</div>
+      <div>※ 外部API/サーバー不使用。データ共有は暗号化ファイルにより実現します。</div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="modal" id="modal" role="dialog" aria-modal="true">
+    <div class="panel">
+      <div class="hd">
+        <div style="font-weight:800" id="modalTitle">Title</div>
+        <button class="btn small" id="modalClose">閉じる</button>
+      </div>
+      <div class="bd" id="modalBody"></div>
+    </div>
+  </div>
+
+<script type="module">
+/**
+ * ClassFlow — PWA / Offline / GitHub Pages
+ * - No server, no external API, no CDN
+ * - Crypto: Web Crypto (PBKDF2 + AES-GCM)
+ * - Teacher can manage all students; student can only manage own record
+ * - Sharing: encrypted files (invite / student update / class backup)
+ *
+ * 注意: セキュリティは「サーバーレスで出来る範囲」で最大化しています。
+ *       教師のパスフレーズは絶対に共有しないでください。
+ */
+
+const APP = {
+  name: "ClassFlow",
+  build: "1.0.0",
+  storage: {
+    teacherVault: "cf_teacher_vault_v1",
+    studentPack: "cf_student_pack_v1",
+    ui: "cf_ui_v1",
+  }
+};
+
+const el = (sel, root=document)=>root.querySelector(sel);
+const els = (sel, root=document)=>Array.from(root.querySelectorAll(sel));
+
+const ui = {
+  main: el("#main"),
+  tabs: el("#tabs"),
+  mainTitle: el("#mainTitle"),
+  mainSub: el("#mainSub"),
+  modeBadge: el("#modeBadge"),
+  lockBtn: el("#lockBtn"),
+  installBtn: el("#installBtn"),
+  toast: el("#toast"),
+  modal: el("#modal"),
+  modalTitle: el("#modalTitle"),
+  modalBody: el("#modalBody"),
+  modalClose: el("#modalClose"),
+  buildTag: el("#buildTag"),
+};
+
+ui.buildTag.textContent = "v" + APP.build;
+
+let deferredPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  ui.installBtn.style.display = "inline-flex";
+});
+ui.installBtn.addEventListener("click", async ()=>{
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  ui.installBtn.style.display = "none";
+});
+
+function toast(msg){
+  ui.toast.textContent = msg;
+  ui.toast.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>ui.toast.classList.remove("show"), 2400);
+}
+
+// ---------- Base64 helpers ----------
+function b64enc(buf){
+  const bytes = new Uint8Array(buf);
+  let bin = "";
+  for (let i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+function b64dec(str){
+  const bin = atob(str);
+  const bytes = new Uint8Array(bin.length);
+  for (let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
+}
+function utf8enc(str){ return new TextEncoder().encode(str); }
+function utf8dec(buf){ return new TextDecoder().decode(buf); }
+function nowISO(){ return new Date().toISOString(); }
+function uid(prefix="id"){
+  const s = crypto.getRandomValues(new Uint8Array(10));
+  const hex = [...s].map(x=>x.toString(16).padStart(2,"0")).join("");
+  return prefix + "_" + hex;
+}
+function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+// ---------- Crypto ----------
+const CRYPTO = {
+  pbkdf2Iter: 210_000,
+  async deriveKEK(passphrase, saltB64){
+    const salt = b64dec(saltB64);
+    const keyMaterial = await crypto.subtle.importKey(
+      "raw", utf8enc(passphrase), "PBKDF2", false, ["deriveKey"]
+    );
+    return await crypto.subtle.deriveKey(
+      {name:"PBKDF2", hash:"SHA-256", salt, iterations: CRYPTO.pbkdf2Iter},
+      keyMaterial,
+      {name:"AES-GCM", length:256},
+      false,
+      ["encrypt","decrypt"]
+    );
+  },
+  async wrapDEKWithPassphrase(dekRawBuf, passphrase){
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const saltB64 = b64enc(salt);
+    const kek = await CRYPTO.deriveKEK(passphrase, saltB64);
+    const ct = await crypto.subtle.encrypt({name:"AES-GCM", iv}, kek, dekRawBuf);
+    return {v:1, alg:"PBKDF2-SHA256/AES-256-GCM", iter:CRYPTO.pbkdf2Iter, salt:saltB64, iv:b64enc(iv), ct:b64enc(ct)};
+  },
+  async unwrapDEKWithPassphrase(wrapped, passphrase){
+    const kek = await CRYPTO.deriveKEK(passphrase, wrapped.salt);
+    const dekRaw = await crypto.subtle.decrypt(
+      {name:"AES-GCM", iv: new Uint8Array(b64dec(wrapped.iv))},
+      kek,
+      b64dec(wrapped.ct)
+    );
+    return dekRaw;
+  },
+  async importAESKey(rawBuf, usage){
+    return await crypto.subtle.importKey("raw", rawBuf, {name:"AES-GCM"}, false, usage);
+  },
+  async encryptJSONWithKey(key, obj){
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const pt = utf8enc(JSON.stringify(obj));
+    const ct = await crypto.subtle.encrypt({name:"AES-GCM", iv}, key, pt);
+    return {v:1, iv:b64enc(iv), ct:b64enc(ct)};
+  },
+  async decryptJSONWithKey(key, enc){
+    const pt = await crypto.subtle.decrypt({name:"AES-GCM", iv:new Uint8Array(b64dec(enc.iv))}, key, b64dec(enc.ct));
+    return JSON.parse(utf8dec(pt));
+  }
+};
+
+// ---------- File helpers ----------
+function downloadJSON(filename, obj){
+  const blob = new Blob([JSON.stringify(obj, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+}
+function pickFile(accept=".json"){
+  return new Promise((resolve)=>{
+    const inp = document.createElement("input");
+    inp.type="file";
+    inp.accept=accept;
+    inp.onchange = ()=>{
+      resolve(inp.files?.[0] || null);
+      inp.remove();
+    };
+    inp.click();
+  });
+}
+async function readJSONFile(file){
+  const txt = await file.text();
+  return JSON.parse(txt);
+}
+
+// ---------- Minimal router ----------
+let SESSION = {
+  mode: "none", // teacher | student | none
+  teacher: { unlocked:false, classId:null, className:null, teacherKey:null, vault:null },
+  student: { unlocked:false, classId:null, studentId:null, studentKeyRaw:null, dekKey:null, pack:null, record:null },
+  ui: { tab:"home" }
+};
+
+function setMode(mode){
+  SESSION.mode = mode;
+  ui.modeBadge.textContent = mode==="teacher" ? "講師" : mode==="student" ? "生徒" : "未ログイン";
+  ui.lockBtn.style.display = (mode==="teacher" || mode==="student") ? "inline-flex" : "none";
+}
+
+ui.lockBtn.addEventListener("click", ()=>{
+  lockAll();
+  renderHome();
+  toast("ロックしました");
+});
+
+function lockAll(){
+  // Clear secrets from memory, keep encrypted storage as-is
+  SESSION = {
+    mode:"none",
+    teacher:{unlocked:false,classId:null,className:null,teacherKey:null,vault:null},
+    student:{unlocked:false,classId:null,studentId:null,studentKeyRaw:null,dekKey:null,pack:null,record:null},
+    ui:{tab:"home"}
+  };
+  setMode("none");
+  ui.tabs.style.display="none";
+  ui.tabs.innerHTML="";
+}
+
+// ---------- Data model ----------
+/**
+Teacher Vault plaintext structure:
+{
+  v:1,
+  classId, className, createdAt,
+  courses:[{courseId, title, subject, units:[{unitId,title, estMin, url}]}],
+  students:[{
+     studentId, displayName,
+     wrappedTeacher:{...},  // wraps per-student DEK with teacher passphrase
+     wrappedStudent:{...},  // wraps per-student DEK with student passphrase (temp)
+     recordEnc:{...},       // student record encrypted with DEK (AES-GCM)
+     lastUpdateAt
+  }],
+  audit:[{at, type, detail}]
+}
+
+Student Pack structure (stored in localStorage and as invite file):
+{
+  v:1,
+  classId, className,
+  studentId, displayName,
+  coursesPublic:[...], // course list + units (no other students)
+  wrappedStudent:{...},
+  recordEnc:{...},
+  createdAt
+}
+
+Student Record plaintext (encrypted by DEK):
+{
+  v:1,
+  studentId,
+  enrollments:[{courseId, unitStatus:{[unitId]: {done:boolean, watchedMin:number, note:string, updatedAt}} }],
+  logs:[{at, courseId, unitId, watchedMin, memo}],
+  goals:{weeklyMin:number},
+  meta:{createdAt, updatedAt, deviceId}
+}
+*/
+
+// ---------- Storage ----------
+function hasTeacherVault(){ return !!localStorage.getItem(APP.storage.teacherVault); }
+function hasStudentPack(){ return !!localStorage.getItem(APP.storage.studentPack); }
+
+function saveTeacherVaultEncrypted(vaultEncObj){
+  localStorage.setItem(APP.storage.teacherVault, JSON.stringify(vaultEncObj));
+}
+function loadTeacherVaultEncrypted(){
+  const s = localStorage.getItem(APP.storage.teacherVault);
+  return s ? JSON.parse(s) : null;
+}
+function saveStudentPack(pack){
+  localStorage.setItem(APP.storage.studentPack, JSON.stringify(pack));
+}
+function loadStudentPack(){
+  const s = localStorage.getItem(APP.storage.studentPack);
+  return s ? JSON.parse(s) : null;
+}
+function saveUIState(){
+  localStorage.setItem(APP.storage.ui, JSON.stringify(SESSION.ui));
+}
+function loadUIState(){
+  const s = localStorage.getItem(APP.storage.ui);
+  if(!s) return;
+  try{ SESSION.ui = {...SESSION.ui, ...JSON.parse(s)}; }catch{}
+}
+
+// ---------- Modal ----------
+function showModal(title, bodyNodeOrHTML){
+  ui.modalTitle.textContent = title;
+  ui.modalBody.innerHTML = "";
+  if(typeof bodyNodeOrHTML === "string"){
+    ui.modalBody.innerHTML = bodyNodeOrHTML;
+  }else{
+    ui.modalBody.appendChild(bodyNodeOrHTML);
+  }
+  ui.modal.classList.add("show");
+}
+function closeModal(){ ui.modal.classList.remove("show"); }
+ui.modalClose.addEventListener("click", closeModal);
+ui.modal.addEventListener("click", (e)=>{ if(e.target === ui.modal) closeModal(); });
+window.addEventListener("keydown", (e)=>{ if(e.key==="Escape") closeModal(); });
+
+// ---------- UI helpers ----------
+function h(tag, attrs={}, ...children){
+  const n = document.createElement(tag);
+  for(const [k,v] of Object.entries(attrs||{})){
+    if(k==="class") n.className = v;
+    else if(k==="html") n.innerHTML = v;
+    else if(k.startsWith("on") && typeof v==="function") n.addEventListener(k.slice(2), v);
+    else if(v !== null && v !== undefined) n.setAttribute(k, v);
+  }
+  for(const c of children){
+    if(c===null || c===undefined) continue;
+    if(typeof c==="string") n.appendChild(document.createTextNode(c));
+    else n.appendChild(c);
+  }
+  return n;
+}
+function field(labelText, inputEl, hintText=null){
+  const wrap = h("div", {class:"stack"});
+  wrap.appendChild(h("div",{}, h("label",{}, labelText), inputEl));
+  if(hintText) wrap.appendChild(h("div",{class:"hint"}, hintText));
+  return wrap;
+}
+function confirmDialog(title, msg){
+  return new Promise((resolve)=>{
+    const body = h("div",{class:"stack"},
+      h("div",{class:"sub"}, msg),
+      h("div",{class:"row"},
+        h("button",{class:"btn", onClick:()=>{ closeModal(); resolve(false); }}, "キャンセル"),
+        h("button",{class:"btn danger", onClick:()=>{ closeModal(); resolve(true); }}, "OK")
+      )
+    );
+    showModal(title, body);
+  });
+}
+
+// ---------- Teacher vault encryption ----------
+async function createTeacherVault(className, teacherPass){
+  const teacherKeyWrap = await CRYPTO.wrapDEKWithPassphrase(crypto.getRandomValues(new Uint8Array(32)).buffer, teacherPass);
+  // This "teacher master DEK" encrypts the whole vault package.
+  // We keep masterDEK raw in memory only during setup; then we wrap & store.
+  const masterDEKRaw = await CRYPTO.unwrapDEKWithPassphrase(teacherKeyWrap, teacherPass);
+  const masterKey = await CRYPTO.importAESKey(masterDEKRaw, ["encrypt","decrypt"]);
+
+  const classId = uid("class");
+  const vaultPlain = {
+    v:1,
+    classId, className,
+    createdAt: nowISO(),
+    courses: [],
+    students: [],
+    audit: [{at: nowISO(), type:"init", detail:"Class created"}]
+  };
+  const vaultEnc = await CRYPTO.encryptJSONWithKey(masterKey, vaultPlain);
+
+  const packageEnc = {
+    v:1,
+    kind:"teacher_vault",
+    classId,
+    className,
+    masterKeyWrap: teacherKeyWrap,
+    vaultEnc,
+    updatedAt: nowISO()
+  };
+  saveTeacherVaultEncrypted(packageEnc);
+
+  SESSION.teacher = {unlocked:true, classId, className, teacherKey: {passphrase: teacherPass, masterKeyWrap: teacherKeyWrap, masterKey }, vault: vaultPlain};
+  setMode("teacher");
+  toast("講師セットアップ完了");
+}
+
+async function unlockTeacherVault(teacherPass){
+  const pack = loadTeacherVaultEncrypted();
+  if(!pack) throw new Error("Teacher vault not found");
+  const masterDEKRaw = await CRYPTO.unwrapDEKWithPassphrase(pack.masterKeyWrap, teacherPass);
+  const masterKey = await CRYPTO.importAESKey(masterDEKRaw, ["encrypt","decrypt"]);
+  const vaultPlain = await CRYPTO.decryptJSONWithKey(masterKey, pack.vaultEnc);
+
+  SESSION.teacher = {
+    unlocked:true,
+    classId: pack.classId,
+    className: pack.className,
+    teacherKey:{ passphrase: teacherPass, masterKeyWrap: pack.masterKeyWrap, masterKey },
+    vault: vaultPlain
+  };
+  setMode("teacher");
+  toast("講師として解除しました");
+}
+
+async function persistTeacherVault(){
+  const pack = loadTeacherVaultEncrypted();
+  if(!pack || !SESSION.teacher.unlocked) return;
+  const vaultEnc = await CRYPTO.encryptJSONWithKey(SESSION.teacher.teacherKey.masterKey, SESSION.teacher.vault);
+  const newPack = {...pack, className: SESSION.teacher.vault.className, vaultEnc, updatedAt: nowISO()};
+  saveTeacherVaultEncrypted(newPack);
+}
+
+function teacherAudit(type, detail){
+  SESSION.teacher.vault.audit.unshift({at: nowISO(), type, detail});
+  SESSION.teacher.vault.audit = SESSION.teacher.vault.audit.slice(0, 200);
+}
+
+// ---------- Student record crypto ----------
+async function newStudentRecord(studentId){
+  const deviceId = uid("dev");
+  return {
+    v:1,
+    studentId,
+    enrollments: [],
+    logs: [],
+    goals: {weeklyMin: 120},
+    meta: {createdAt: nowISO(), updatedAt: nowISO(), deviceId}
+  };
+}
+async function encryptStudentRecordWithDEK(dekKey, record){
+  record.meta.updatedAt = nowISO();
+  return await CRYPTO.encryptJSONWithKey(dekKey, record);
+}
+async function decryptStudentRecordWithDEK(dekKey, enc){
+  return await CRYPTO.decryptJSONWithKey(dekKey, enc);
+}
+
+// ---------- Teacher operations ----------
+async function teacherAddCourse({title, subject, unitsText}){
+  const courseId = uid("course");
+  const units = (unitsText||"").split("\n").map(s=>s.trim()).filter(Boolean).map(line=>{
+    // Optional pattern: title | estMin | url
+    const parts = line.split("|").map(x=>x.trim());
+    const unitTitle = parts[0] || "Unit";
+    const estMin = clamp(parseInt(parts[1]||"0",10) || 0, 0, 600);
+    const url = (parts[2]||"").trim();
+    return {unitId: uid("unit"), title: unitTitle, estMin, url};
+  });
+  SESSION.teacher.vault.courses.push({courseId, title, subject, units});
+  teacherAudit("course_add", title);
+  await persistTeacherVault();
+  toast("講座を追加しました");
+}
+
+function teacherFindCourse(courseId){
+  return SESSION.teacher.vault.courses.find(c=>c.courseId===courseId);
+}
+function teacherFindStudent(studentId){
+  return SESSION.teacher.vault.students.find(s=>s.studentId===studentId);
+}
+
+async function teacherAddStudent({displayName, studentPassphrase}){
+  const studentId = uid("stu");
+  // Per-student DEK:
+  const dekRaw = crypto.getRandomValues(new Uint8Array(32)).buffer;
+  const dekKey = await CRYPTO.importAESKey(dekRaw, ["encrypt","decrypt"]);
+  const record = await newStudentRecord(studentId);
+  const recordEnc = await encryptStudentRecordWithDEK(dekKey, record);
+
+  // Wrap DEK for teacher and student
+  const wrappedTeacher = await CRYPTO.wrapDEKWithPassphrase(dekRaw, SESSION.teacher.teacherKey.passphrase);
+  const wrappedStudent = await CRYPTO.wrapDEKWithPassphrase(dekRaw, studentPassphrase);
+
+  const st = {
+    studentId,
+    displayName: displayName?.trim() || studentId,
+    wrappedTeacher,
+    wrappedStudent,
+    recordEnc,
+    lastUpdateAt: nowISO(),
+  };
+  SESSION.teacher.vault.students.push(st);
+  teacherAudit("student_add", st.displayName);
+  await persistTeacherVault();
+  toast("生徒を追加しました");
+  return st;
+}
+
+async function teacherDecryptStudentRecord(student){
+  const dekRaw = await CRYPTO.unwrapDEKWithPassphrase(student.wrappedTeacher, SESSION.teacher.teacherKey.passphrase);
+  const dekKey = await CRYPTO.importAESKey(dekRaw, ["encrypt","decrypt"]);
+  const record = await decryptStudentRecordWithDEK(dekKey, student.recordEnc);
+  return {dekRaw, dekKey, record};
+}
+
+async function teacherGenerateInvite(studentId){
+  const st = teacherFindStudent(studentId);
+  if(!st) throw new Error("student not found");
+  const pack = {
+    v:1,
+    kind:"student_invite",
+    classId: SESSION.teacher.vault.classId,
+    className: SESSION.teacher.vault.className,
+    studentId: st.studentId,
+    displayName: st.displayName,
+    coursesPublic: SESSION.teacher.vault.courses,
+    wrappedStudent: st.wrappedStudent,
+    recordEnc: st.recordEnc,
+    createdAt: nowISO(),
+  };
+  downloadJSON(`ClassFlow_invite_${st.studentId}.json`, pack);
+  teacherAudit("invite_export", st.studentId);
+  await persistTeacherVault();
+  toast("招待ファイルをダウンロードしました");
+}
+
+async function teacherExportClassBackup(){
+  // Export encrypted teacher vault package as-is (no plaintext)
+  const pack = loadTeacherVaultEncrypted();
+  if(!pack) throw new Error("vault missing");
+  downloadJSON(`ClassFlow_class_backup_${SESSION.teacher.vault.classId}.json`, pack);
+  toast("暗号化クラスDBをエクスポートしました");
+}
+async function teacherImportClassBackup(fileObj){
+  if(fileObj.kind !== "teacher_vault") throw new Error("not a class backup");
+  saveTeacherVaultEncrypted(fileObj);
+  lockAll();
+  renderHome();
+  toast("クラスDBをインポートしました。講師パスで解除してください。");
+}
+
+async function teacherImportStudentUpdate(fileObj){
+  if(fileObj.kind !== "student_update") throw new Error("not student_update");
+  const st = teacherFindStudent(fileObj.studentId);
+  if(!st) throw new Error("unknown studentId");
+  // Replace encrypted record
+  st.recordEnc = fileObj.recordEnc;
+  st.lastUpdateAt = fileObj.updatedAt || nowISO();
+  teacherAudit("student_update_import", st.studentId);
+  await persistTeacherVault();
+  toast("生徒の更新を取り込みました");
+}
+
+async function teacherResetStudentPassphrase(studentId, newTempPass){
+  const st = teacherFindStudent(studentId);
+  if(!st) throw new Error("student not found");
+  // Rewrap DEK for student using teacher-wrapped DEK
+  const dekRaw = await CRYPTO.unwrapDEKWithPassphrase(st.wrappedTeacher, SESSION.teacher.teacherKey.passphrase);
+  st.wrappedStudent = await CRYPTO.wrapDEKWithPassphrase(dekRaw, newTempPass);
+  teacherAudit("student_pass_reset", studentId);
+  await persistTeacherVault();
+  toast("生徒用パスフレーズを再発行しました");
+}
+
+// ---------- Student operations ----------
+async function studentImportInvite(inviteObj){
+  if(inviteObj.kind !== "student_invite") throw new Error("not invite");
+  saveStudentPack(inviteObj);
+  toast("招待ファイルを取り込みました");
+}
+
+async function studentUnlock(passphrase){
+  const pack = loadStudentPack();
+  if(!pack) throw new Error("student pack missing");
+  const dekRaw = await CRYPTO.unwrapDEKWithPassphrase(pack.wrappedStudent, passphrase);
+  const dekKey = await CRYPTO.importAESKey(dekRaw, ["encrypt","decrypt"]);
+  const record = await decryptStudentRecordWithDEK(dekKey, pack.recordEnc);
+
+  SESSION.student = {
+    unlocked:true,
+    classId: pack.classId,
+    studentId: pack.studentId,
+    studentKeyRaw: passphrase,
+    dekKey,
+    pack,
+    record
+  };
+  setMode("student");
+  toast("生徒として解除しました");
+}
+
+async function studentPersist(){
+  if(!SESSION.student.unlocked) return;
+  // re-encrypt record to pack
+  const recordEnc = await encryptStudentRecordWithDEK(SESSION.student.dekKey, SESSION.student.record);
+  const pack = {...SESSION.student.pack, recordEnc};
+  saveStudentPack(pack);
+  SESSION.student.pack = pack;
+}
+
+function studentEnsureEnrollment(courseId){
+  let e = SESSION.student.record.enrollments.find(x=>x.courseId===courseId);
+  if(!e){
+    e = {courseId, unitStatus:{}};
+    SESSION.student.record.enrollments.push(e);
+  }
+  return e;
+}
+
+function studentUnitStatus(courseId, unitId){
+  const e = studentEnsureEnrollment(courseId);
+  if(!e.unitStatus[unitId]){
+    e.unitStatus[unitId] = {done:false, watchedMin:0, note:"", updatedAt: nowISO()};
+  }
+  return e.unitStatus[unitId];
+}
+
+async function studentToggleDone(courseId, unitId, done){
+  const us = studentUnitStatus(courseId, unitId);
+  us.done = !!done;
+  us.updatedAt = nowISO();
+  await studentPersist();
+}
+async function studentAddWatch(courseId, unitId, minutes, memo=""){
+  minutes = clamp(minutes, 0, 10000);
+  const us = studentUnitStatus(courseId, unitId);
+  us.watchedMin = clamp((us.watchedMin||0) + minutes, 0, 1000000);
+  us.updatedAt = nowISO();
+  SESSION.student.record.logs.unshift({at: nowISO(), courseId, unitId, watchedMin: minutes, memo: memo.trim()});
+  SESSION.student.record.logs = SESSION.student.record.logs.slice(0, 500);
+  await studentPersist();
+}
+async function studentExportUpdate(){
+  const updatedAt = nowISO();
+  const obj = {
+    v:1,
+    kind:"student_update",
+    classId: SESSION.student.pack.classId,
+    studentId: SESSION.student.pack.studentId,
+    updatedAt,
+    recordEnc: SESSION.student.pack.recordEnc
+  };
+  downloadJSON(`ClassFlow_update_${SESSION.student.pack.studentId}.json`, obj);
+  toast("更新ファイルをダウンロードしました");
+}
+
+// ---------- Analytics helpers ----------
+function computeStudentStats(record, courses){
+  const unitsAll = [];
+  for(const c of courses){
+    for(const u of c.units) unitsAll.push({courseId:c.courseId, unitId:u.unitId, estMin:u.estMin||0});
+  }
+  let done=0, watched=0, est=0;
+  const eMap = new Map(record.enrollments.map(e=>[e.courseId, e]));
+  for(const u of unitsAll){
+    const e = eMap.get(u.courseId);
+    const us = e?.unitStatus?.[u.unitId];
+    if(us?.done) done++;
+    watched += us?.watchedMin || 0;
+    est += u.estMin || 0;
+  }
+  return {
+    totalUnits: unitsAll.length,
+    doneUnits: done,
+    watchedMin: watched,
+    estMin: est
+  };
+}
+
+function computeClassStats(vault){
+  let totalUnits = vault.courses.reduce((acc,c)=>acc + (c.units?.length||0), 0);
+  let studentCount = vault.students.length;
+  return {totalUnits, studentCount};
+}
+
+// ---------- Render ----------
+function renderHome(){
+  setMode("none");
+  ui.mainTitle.textContent = "ようこそ";
+  ui.mainSub.textContent = "講師/生徒のどちらとして使いますか？（データは端末内に暗号化保存されます）";
+  ui.tabs.style.display="none";
+  ui.tabs.innerHTML="";
+
+  const teacherBtn = h("button", {class:"btn primary wide", onClick: renderTeacherEntry}, "講師として利用");
+  const studentBtn = h("button", {class:"btn wide", onClick: renderStudentEntry}, "生徒として利用");
+
+  const info = h("div",{class:"item"},
+    h("div",{class:"meta"},
+      h("div",{class:"h"}, "このアプリのセキュリティ設計"),
+      h("div",{class:"m"}, "・端末保存は暗号化 (AES-GCM)\n・共有は暗号化ファイル\n・サーバー/外部API不使用")
+    ),
+    h("span",{class:"badge ok"}, "PWA")
+  );
+
+  const reset = h("button",{class:"btn danger wide", onClick: async ()=>{
+    const ok = await confirmDialog("初期化", "この端末の保存データ（講師/生徒）をすべて削除します。よろしいですか？");
+    if(!ok) return;
+    localStorage.removeItem(APP.storage.teacherVault);
+    localStorage.removeItem(APP.storage.studentPack);
+    localStorage.removeItem(APP.storage.ui);
+    lockAll();
+    renderHome();
+    toast("端末データを削除しました");
+  }}, "この端末のデータを削除（初期化）");
+
+  ui.main.innerHTML = "";
+  ui.main.appendChild(h("div",{class:"stack"},
+    h("div",{class:"two"},
+      h("div",{class:"stack"},
+        teacherBtn,
+        h("div",{class:"hint"}, "講師はクラスDB（暗号化）を保持し、生徒更新を集約します。"),
+        (hasTeacherVault()
+          ? h("div",{class:"badge ok"},"この端末には講師データがあります")
+          : h("div",{class:"badge"},"この端末には講師データがありません")
+        )
+      ),
+      h("div",{class:"stack"},
+        studentBtn,
+        h("div",{class:"hint"}, "生徒は招待ファイルを取り込み、自分の進捗だけ編集できます。"),
+        (hasStudentPack()
+          ? h("div",{class:"badge ok"},"この端末には生徒データがあります")
+          : h("div",{class:"badge"},"この端末には生徒データがありません")
+        )
+      )
+    ),
+    info,
+    reset
+  ));
+}
+
+function renderTeacherEntry(){
+  ui.mainTitle.textContent = "講師ログイン";
+  ui.mainSub.textContent = "講師パスフレーズでクラスDBを解除します。初回はセットアップから。";
+
+  const pass = h("input",{class:"input", type:"password", placeholder:"講師パスフレーズ"});
+  const className = h("input",{class:"input", placeholder:"塾/クラス名（例: 数学A 2026）"});
+  const pass2 = h("input",{class:"input", type:"password", placeholder:"講師パスフレーズ（確認）"});
+
+  const setupBtn = h("button",{class:"btn primary wide", onClick: async ()=>{
+    try{
+      if(hasTeacherVault()){
+        toast("この端末には既に講師データがあります（初期化が必要です）");
+        return;
+      }
+      if(pass.value.length < 8) throw new Error("パスフレーズは8文字以上を推奨します");
+      if(pass.value !== pass2.value) throw new Error("確認パスが一致しません");
+      await createTeacherVault(className.value.trim() || "My Class", pass.value);
+      renderTeacherApp();
+    }catch(e){
+      toast("失敗: " + e.message);
+    }
+  }}, "初回セットアップ（この端末を講師端末にする）");
+
+  const unlockBtn = h("button",{class:"btn wide", onClick: async ()=>{
+    try{
+      if(!hasTeacherVault()) throw new Error("この端末に講師データがありません（セットアップしてください）");
+      await unlockTeacherVault(pass.value);
+      renderTeacherApp();
+    }catch(e){
+      toast("解除できません: " + e.message);
+    }
+  }}, "解除して開く");
+
+  const importBtn = h("button",{class:"btn wide", onClick: async ()=>{
+    try{
+      const f = await pickFile(".json");
+      if(!f) return;
+      const obj = await readJSONFile(f);
+      await teacherImportClassBackup(obj);
+    }catch(e){
+      toast("インポート失敗: " + e.message);
+    }
+  }}, "クラスDB（暗号化）をインポート");
+
+  ui.main.innerHTML = "";
+  ui.main.appendChild(h("div",{class:"stack"},
+    h("div",{class:"card", style:"box-shadow:none;background:transparent;border:none"},
+      h("div",{class:"stack"},
+        h("div",{class:"two"},
+          h("div",{class:"stack"},
+            field("講師パスフレーズ", pass, "※ 忘れると復元できません。強固なものを使用してください。"),
+            unlockBtn
+          ),
+          h("div",{class:"stack"},
+            field("クラス名", className),
+            field("講師パスフレーズ（確認）", pass2),
+            setupBtn
+          )
+        ),
+        h("div",{class:"hr"}),
+        h("div",{class:"row"},
+          importBtn,
+          h("button",{class:"btn", onClick: renderHome}, "戻る")
+        )
+      )
+    )
+  ));
+}
+
+function renderTeacherApp(){
+  if(!SESSION.teacher.unlocked){
+    renderTeacherEntry(); return;
+  }
+  setMode("teacher");
+  ui.mainTitle.textContent = SESSION.teacher.vault.className || "Class";
+  ui.mainSub.textContent = "講師ダッシュボード：生徒・講座・分析・エクスポート/インポート";
+  ui.tabs.style.display = "flex";
+
+  const tabs = [
+    {id:"students", label:"生徒"},
+    {id:"courses", label:"講座"},
+    {id:"analytics", label:"分析"},
+    {id:"sync", label:"共有/バックアップ"},
+    {id:"audit", label:"ログ"},
+    {id:"settings", label:"設定"},
+  ];
+
+  ui.tabs.innerHTML = "";
+  for(const t of tabs){
+    const btn = h("button",{class:"tab" + (SESSION.ui.tab===t.id?" active":""), onClick: ()=>{
+      SESSION.ui.tab = t.id;
+      saveUIState();
+      renderTeacherApp();
+    }}, t.label);
+    ui.tabs.appendChild(btn);
+  }
+
+  const tab = SESSION.ui.tab || "students";
+  if(tab==="courses") return renderTeacherCourses();
+  if(tab==="analytics") return renderTeacherAnalytics();
+  if(tab==="sync") return renderTeacherSync();
+  if(tab==="audit") return renderTeacherAudit();
+  if(tab==="settings") return renderTeacherSettings();
+  return renderTeacherStudents();
+}
+
+function renderTeacherStudents(){
+  const vault = SESSION.teacher.vault;
+  const q = h("input",{class:"input", placeholder:"検索（生徒コード/表示名）"});
+  const list = h("div",{class:"list"});
+
+  function redraw(){
+    list.innerHTML = "";
+    const term = q.value.trim().toLowerCase();
+    const students = vault.students
+      .filter(s=> !term || (s.studentId+s.displayName).toLowerCase().includes(term))
+      .sort((a,b)=> (a.displayName||"").localeCompare(b.displayName||""));
+
+    for(const st of students){
+      const row = h("div",{class:"item"},
+        h("div",{class:"meta"},
+          h("div",{class:"h"}, st.displayName),
+          h("div",{class:"m mono"}, `${st.studentId} • 最終更新: ${new Date(st.lastUpdateAt).toLocaleString()}`)
+        ),
+        h("div",{class:"row"},
+          h("button",{class:"btn small", onClick: ()=>openTeacherStudentDetail(st.studentId)}, "詳細"),
+          h("button",{class:"btn small", onClick: ()=>teacherGenerateInvite(st.studentId)}, "招待"),
+          h("button",{class:"btn small", onClick: async ()=>{
+            const newPass = prompt("生徒用の新しい一時パスフレーズ（8文字以上推奨）","");
+            if(!newPass) return;
+            try{ await teacherResetStudentPassphrase(st.studentId, newPass); }
+            catch(e){ toast("失敗: "+e.message); }
+          }}, "パス再発行"),
+        )
+      );
+      list.appendChild(row);
+    }
+  }
+  q.addEventListener("input", redraw);
+
+  const addBtn = h("button",{class:"btn primary", onClick: ()=>openTeacherAddStudent()}, "＋ 生徒追加");
+  const kp = computeClassStats(vault);
+
+  ui.main.innerHTML = "";
+  ui.main.appendChild(h("div",{class:"stack"},
+    h("div",{class:"kpi"},
+      h("div",{class:"box"}, h("div",{class:"num"}, String(kp.studentCount)), h("div",{class:"lab"},"生徒数")),
+      h("div",{class:"box"}, h("div",{class:"num"}, String(vault.courses.length)), h("div",{class:"lab"},"講座数")),
+      h("div",{class:"box"}, h("div",{class:"num"}, String(kp.totalUnits)), h("div",{class:"lab"},"総ユニット数")),
+    ),
+    h("div",{class:"row"}, addBtn),
+    field("検索", q),
+    list
+  ));
+  redraw();
+}
+
+function openTeacherAddStudent(){
+  const name = h("input",{class:"input", placeholder:"表示名（推奨：生徒コード。例: S-012）"});
+  const pass = h("input",{class:"input", type:"password", placeholder:"生徒用 一時パスフレーズ（本人に共有）"});
+  const body = h("div",{class:"stack"},
+    field("表示名", name, "※ 本名は入力不要。生徒コード運用を推奨。"),
+    field("一時パスフレーズ", pass, "※ 生徒が初回ログインに使用します。"),
+    h("div",{class:"row"},
+      h("button",{class:"btn", onClick: closeModal}, "キャンセル"),
+      h("button",{class:"btn primary", onClick: async ()=>{
+        try{
+          if(pass.value.length < 6) throw new Error("一時パスは短すぎます（6文字以上推奨）");
+          const st = await teacherAddStudent({displayName:name.value, studentPassphrase: pass.value});
+          closeModal();
+          // auto offer invite download
+          await teacherGenerateInvite(st.studentId);
+          renderTeacherApp();
+        }catch(e){ toast("追加失敗: "+e.message); }
+      }}, "追加して招待を作る")
+    )
+  );
+  showModal("生徒追加", body);
+}
+
+async function openTeacherStudentDetail(studentId){
+  const st = teacherFindStudent(studentId);
+  if(!st) return;
+  try{
+    const {dekKey, record} = await teacherDecryptStudentRecord(st);
+    const courses = SESSION.teacher.vault.courses;
+
+    const stats = computeStudentStats(record, courses);
+
+    const header = h("div",{class:"stack"},
+      h("div",{class:"row"},
+        h("span",{class:"badge"}, "生徒"),
+        h("span",{class:"badge mono"}, st.studentId),
+        (stats.totalUnits ? h("span",{class:"badge ok"}, `完了 ${stats.doneUnits}/${stats.totalUnits}`) : h("span",{class:"badge"}, "講座未設定")),
+        h("span",{class:"badge"}, `視聴 ${stats.watchedMin}分`)
+      ),
+      h("div",{class:"sub"}, "講師は閲覧・編集が可能です。編集後は自動保存されます。")
+    );
+
+    const courseSel = h("select",{class:"input"});
+    courseSel.appendChild(h("option",{value:""},"（講座を選択）"));
+    for(const c of courses) courseSel.appendChild(h("option",{value:c.courseId}, `${c.subject} / ${c.title}`));
+
+    const unitSel = h("select",{class:"input"});
+    unitSel.appendChild(h("option",{value:""},"（ユニットを選択）"));
+
+    courseSel.addEventListener("change", ()=>{
+      unitSel.innerHTML = "";
+      unitSel.appendChild(h("option",{value:""},"（ユニットを選択）"));
+      const c = courses.find(x=>x.courseId===courseSel.value);
+      if(!c) return;
+      for(const u of c.units){
+        unitSel.appendChild(h("option",{value:u.unitId}, u.title));
+      }
+    });
+
+    const minutes = h("input",{class:"input", type:"number", min:"0", step:"5", value:"30"});
+    const memo = h("input",{class:"input", placeholder:"メモ（任意）"});
+
+    const logs = h("div",{class:"list"});
+    function renderLogs(){
+      logs.innerHTML = "";
+      for(const L of record.logs.slice(0, 30)){
+        const c = courses.find(x=>x.courseId===L.courseId);
+        const u = c?.units?.find(x=>x.unitId===L.unitId);
+        logs.appendChild(h("div",{class:"item"},
+          h("div",{class:"meta"},
+            h("div",{class:"h"}, `${L.watchedMin}分  ${c?.title||"—"} / ${u?.title||"—"}`),
+            h("div",{class:"m"}, `${new Date(L.at).toLocaleString()}  ${L.memo?("• "+L.memo):""}`)
+          ),
+          h("span",{class:"badge"}, "log")
+        ));
+      }
+    }
+    renderLogs();
+
+    const body = h("div",{class:"stack"},
+      header,
+      h("div",{class:"two"},
+        field("講座", courseSel),
+        field("ユニット", unitSel)
+      ),
+      h("div",{class:"two"},
+        field("追加視聴（分）", minutes),
+        field("メモ", memo)
+      ),
+      h("div",{class:"row"},
+        h("button",{class:"btn primary", onClick: async ()=>{
+          try{
+            if(!courseSel.value || !unitSel.value) throw new Error("講座とユニットを選択してください");
+            const m = clamp(parseInt(minutes.value||"0",10)||0, 0, 10000);
+            record.logs.unshift({at: nowISO(), courseId: courseSel.value, unitId: unitSel.value, watchedMin: m, memo: memo.value.trim()});
+            record.logs = record.logs.slice(0, 500);
+            // also update unit watched
+            const e = record.enrollments.find(x=>x.courseId===courseSel.value) || (record.enrollments.push({courseId: courseSel.value, unitStatus:{}}), record.enrollments[record.enrollments.length-1]);
+            e.unitStatus[unitSel.value] = e.unitStatus[unitSel.value] || {done:false, watchedMin:0, note:"", updatedAt: nowISO()};
+            e.unitStatus[unitSel.value].watchedMin += m;
+            e.unitStatus[unitSel.value].updatedAt = nowISO();
+
+            const enc = await encryptStudentRecordWithDEK(dekKey, record);
+            st.recordEnc = enc;
+            st.lastUpdateAt = nowISO();
+            teacherAudit("teacher_edit_log", st.studentId);
+            await persistTeacherVault();
+            toast("保存しました");
+            renderLogs();
+          }catch(e){ toast("失敗: "+e.message); }
+        }}, "視聴ログを追加"),
+        h("button",{class:"btn", onClick: closeModal}, "閉じる")
+      ),
+      h("div",{class:"hr"}),
+      h("div",{class:"sub"}, "最新ログ"),
+      logs
+    );
+
+    showModal(st.displayName + " の詳細", body);
+  }catch(e){
+    toast("開けません: " + e.message);
+  }
+}
+
+function renderTeacherCourses(){
+  const vault = SESSION.teacher.vault;
+
+  const list = h("div",{class:"list"});
+  for(const c of vault.courses){
+    const unitCount = c.units?.length || 0;
+    list.appendChild(h("div",{class:"item"},
+      h("div",{class:"meta"},
+        h("div",{class:"h"}, `${c.subject} / ${c.title}`),
+        h("div",{class:"m"}, `ユニット: ${unitCount}`)
+      ),
+      h("div",{class:"row"},
+        h("button",{class:"btn small", onClick: ()=>openCourseEditor(c.courseId)}, "編集"),
+        h("button",{class:"btn small danger", onClick: async ()=>{
+          const ok = await confirmDialog("削除", `講座「${c.title}」を削除しますか？`);
+          if(!ok) return;
+          vault.courses = vault.courses.filter(x=>x.courseId!==c.courseId);
+          teacherAudit("course_delete", c.title);
+          await persistTeacherVault();
+          renderTeacherApp();
+          toast("削除しました");
+        }}, "削除"),
+      )
+    ));
+  }
+
+  const add = h("button",{class:"btn primary", onClick: ()=>openCourseEditor(null)}, "＋ 講座を追加");
+
+  ui.main.innerHTML = "";
+  ui.main.appendChild(h("div",{class:"stack"},
+    h("div",{class:"hint"}, "ユニット一括入力：1行=1ユニット。形式: タイトル | 推定分 | URL（任意）"),
+    h("div",{class:"row"}, add),
+    list
+  ));
+}
+
+function openCourseEditor(courseId){
+  const vault = SESSION.teacher.vault;
+  const existing = courseId ? vault.courses.find(c=>c.courseId===courseId) : null;
+
+  const title = h("input",{class:"input", value: existing?.title||"", placeholder:"例: 高1数学A（映像）"});
+  const subject = h("input",{class:"input", value: existing?.subject||"", placeholder:"例: 数学 / 物理 / 英語"});
+  const units = h("textarea",{class:"input", placeholder:"例) 三角比 | 35 | https://...\n例) 図形の性質 | 25 |",});
+  if(existing){
+    units.value = (existing.units||[]).map(u=> `${u.title} | ${u.estMin||0} | ${u.url||""}`.trim()).join("\n");
+  }
+
+  const body = h("div",{class:"stack"},
+    field("講座タイトル", title),
+    field("科目", subject),
+    field("ユニット（複数行）", units),
+    h("div",{class:"row"},
+      h("button",{class:"btn", onClick: closeModal}, "キャンセル"),
+      h("button",{class:"btn primary", onClick: async ()=>{
+        try{
+          if(!title.value.trim()) throw new Error("タイトルは必須です");
+          const unitsArr = units.value.split("\n").map(s=>s.trim()).filter(Boolean).map(line=>{
+            const parts = line.split("|").map(x=>x.trim());
+            const unitTitle = parts[0] || "Unit";
+            const estMin = clamp(parseInt(parts[1]||"0",10) || 0, 0, 600);
+            const url = (parts[2]||"").trim();
+            return {unitId: uid("unit"), title: unitTitle, estMin, url};
+          });
+
+          if(existing){
+            existing.title = title.value.trim();
+            existing.subject = subject.value.trim() || "—";
+            // Replace units (new ids). Safer: keep old ids? We'll keep old when title matches
+            existing.units = unitsArr;
+            teacherAudit("course_edit", existing.title);
+          }else{
+            await teacherAddCourse({title:title.value.trim(), subject: subject.value.trim() || "—", unitsText: units.value});
+          }
+          await persistTeacherVault();
+          closeModal();
+          renderTeacherApp();
+          toast("保存しました");
+        }catch(e){ toast("保存失敗: "+e.message); }
+      }}, "保存")
+    )
+  );
+  showModal(existing ? "講座を編集" : "講座を追加", body);
+}
+
+function renderTeacherAnalytics(){
+  const vault = SESSION.teacher.vault;
+
+  const canvas = h("canvas",{});
+  const ctx = canvas.getContext("2d");
+
+  const body = h("div",{class:"stack"},
+    h("div",{class:"sub"}, "生徒ごとの直近の視聴分（ログ合計 / 上位10）。"),
+    canvas,
+    h("div",{class:"hint"}, "※ 本分析は講師端末の集約データに基づきます。生徒が更新ファイルを提出していない場合は反映されません。")
+  );
+
+  ui.main.innerHTML="";
+  ui.main.appendChild(body);
+
+  // Draw after layout
+  requestAnimationFrame(async ()=>{
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth;
+    const hgt = canvas.clientHeight;
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(hgt * dpr);
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0,0,w,hgt);
+
+    // Gather stats by decrypting each student (slow but ok for <=50)
+    const pairs = [];
+    for(const st of vault.students){
+      try{
+        const {record} = await teacherDecryptStudentRecord(st);
+        const sum = record.logs.reduce((acc,l)=>acc + (l.watchedMin||0), 0);
+        pairs.push({name: st.displayName, value: sum});
+      }catch{ pairs.push({name: st.displayName, value: 0}); }
+    }
+    pairs.sort((a,b)=>b.value-a.value);
+    const top = pairs.slice(0, 10);
+    const max = Math.max(1, ...top.map(x=>x.value));
+
+    // Draw simple bars
+    const pad = 18;
+    const barH = 18;
+    const gap = 10;
+    const left = 14;
+    const topY = 16;
+
+    ctx.font = "12px " + getComputedStyle(document.body).fontFamily;
+    ctx.fillStyle = "rgba(255,255,255,.88)";
+    ctx.fillText("視聴分（ログ合計）", left, topY);
+
+    let y = topY + 18;
+    for(const item of top){
+      const ratio = item.value / max;
+      const bw = (w - left - pad - 120) * ratio;
+      // bar
+      ctx.fillStyle = "rgba(96,165,250,.55)";
+      ctx.fillRect(left, y, bw, barH);
+      // label
+      ctx.fillStyle = "rgba(255,255,255,.86)";
+      ctx.fillText(item.name, left, y - 2);
+      ctx.fillStyle = "rgba(255,255,255,.70)";
+      ctx.fillText(item.value + "分", left + bw + 8, y + 13);
+      y += barH + gap + 12;
+      if(y > hgt - 28) break;
+    }
+  });
+}
+
+function renderTeacherSync(){
+  const exportBtn = h("button",{class:"btn primary", onClick: async ()=>{ try{ await teacherExportClassBackup(); }catch(e){ toast(e.message);} }}, "暗号化クラスDBをエクスポート（バックアップ）");
+  const importBtn = h("button",{class:"btn", onClick: async ()=>{
+    try{
+      const f = await pickFile(".json"); if(!f) return;
+      const obj = await readJSONFile(f);
+      await teacherImportClassBackup(obj);
+    }catch(e){ toast("失敗: "+e.message); }
+  }}, "暗号化クラスDBをインポート");
+
+  const importUpdateBtn = h("button",{class:"btn", onClick: async ()=>{
+    try{
+      const f = await pickFile(".json"); if(!f) return;
+      const obj = await readJSONFile(f);
+      await teacherImportStudentUpdate(obj);
+      renderTeacherApp();
+    }catch(e){ toast("更新取り込み失敗: "+e.message); }
+  }}, "生徒の更新ファイルを取り込む");
+
+  const body = h("div",{class:"stack"},
+    h("div",{class:"item"},
+      h("div",{class:"meta"},
+        h("div",{class:"h"}, "バックアップ"),
+        h("div",{class:"m"}, "講師端末のクラスDBを暗号化したまま保存します（最重要）。")
+      ),
+      h("span",{class:"badge danger"}, "推奨")
+    ),
+    h("div",{class:"row"}, exportBtn, importBtn),
+    h("div",{class:"hr"}),
+    h("div",{class:"item"},
+      h("div",{class:"meta"},
+        h("div",{class:"h"}, "生徒更新の集約"),
+        h("div",{class:"m"}, "生徒が提出した更新ファイルを講師が取り込み、全体の進捗を集約します。")
+      ),
+      h("span",{class:"badge"}, "運用")
+    ),
+    h("div",{class:"row"}, importUpdateBtn)
+  );
+
+  ui.main.innerHTML="";
+  ui.main.appendChild(body);
+}
+
+function renderTeacherAudit(){
+  const logs = h("div",{class:"list"});
+  for(const a of SESSION.teacher.vault.audit){
+    logs.appendChild(h("div",{class:"item"},
+      h("div",{class:"meta"},
+        h("div",{class:"h"}, a.type),
+        h("div",{class:"m"}, `${new Date(a.at).toLocaleString()} • ${a.detail||""}`)
+      ),
+      h("span",{class:"badge mono"}, "audit")
+    ));
+  }
+  ui.main.innerHTML="";
+  ui.main.appendChild(h("div",{class:"stack"},
+    h("div",{class:"hint"}, "最大200件を保持します。"),
+    logs
+  ));
+}
+
+function renderTeacherSettings(){
+  const name = h("input",{class:"input", value: SESSION.teacher.vault.className || ""});
+  const save = h("button",{class:"btn primary", onClick: async ()=>{
+    SESSION.teacher.vault.className = name.value.trim() || "Class";
+    teacherAudit("settings", "className updated");
+    await persistTeacherVault();
+    renderTeacherApp();
+    toast("保存しました");
+  }}, "保存");
+
+  const exportCSV = h("button",{class:"btn", onClick: async ()=>{
+    // Export simple CSV progress summary
+    try{
+      const vault = SESSION.teacher.vault;
+      const headers = ["studentId","displayName","watchedMin","doneUnits","totalUnits"];
+      const rows = [headers.join(",")];
+
+      for(const st of vault.students){
+        let watched=0, done=0, total=0;
+        try{
+          const {record} = await teacherDecryptStudentRecord(st);
+          const stats = computeStudentStats(record, vault.courses);
+          watched = stats.watchedMin; done=stats.doneUnits; total=stats.totalUnits;
+        }catch{}
+        rows.push([st.studentId, st.displayName, watched, done, total].map(x=>String(x).replaceAll('"','""')).map(x=>`"${x}"`).join(","));
+      }
+      const blob = new Blob([rows.join("\n")], {type:"text/csv"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `ClassFlow_progress_${vault.classId}.csv`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+      toast("CSVを書き出しました");
+    }catch(e){ toast("失敗: "+e.message); }
+  }}, "進捗サマリをCSVで出力");
+
+  ui.main.innerHTML="";
+  ui.main.appendChild(h("div",{class:"stack"},
+    field("クラス名", name),
+    h("div",{class:"row"}, save, exportCSV),
+    h("div",{class:"hr"}),
+    h("div",{class:"hint"}, "高度設定：講師パスフレーズの変更は v1 では未実装です（忘れると復元不可なため）。必要なら、クラスDBを新規作成して移行してください。")
+  ));
+}
+
+function renderStudentEntry(){
+  ui.mainTitle.textContent = "生徒ログイン";
+  ui.mainSub.textContent = "招待ファイルを取り込み、パスフレーズで自分の進捗のみ解除します。";
+
+  const pass = h("input",{class:"input", type:"password", placeholder:"生徒パスフレーズ"});
+  const unlockBtn = h("button",{class:"btn primary wide", onClick: async ()=>{
+    try{
+      if(!hasStudentPack()) throw new Error("招待ファイルが未取り込みです");
+      await studentUnlock(pass.value);
+      renderStudentApp();
+    }catch(e){ toast("解除できません: "+e.message); }
+  }}, "解除して開く");
+
+  const importBtn = h("button",{class:"btn wide", onClick: async ()=>{
+    try{
+      const f = await pickFile(".json");
+      if(!f) return;
+      const obj = await readJSONFile(f);
+      await studentImportInvite(obj);
+      toast("取り込み完了。パスフレーズで解除してください。");
+    }catch(e){ toast("取り込み失敗: "+e.message); }
+  }}, "招待ファイルを取り込む");
+
+  const body = h("div",{class:"stack"},
+    (hasStudentPack()
+      ? h("div",{class:"badge ok"}, "この端末には生徒データがあります")
+      : h("div",{class:"badge"}, "この端末には生徒データがありません")
+    ),
+    field("生徒パスフレーズ", pass, "※ 初回は講師が渡した一時パスフレーズです。"),
+    unlockBtn,
+    importBtn,
+    h("button",{class:"btn", onClick: renderHome}, "戻る")
+  );
+
+  ui.main.innerHTML="";
+  ui.main.appendChild(body);
+}
+
+function renderStudentApp(){
+  if(!SESSION.student.unlocked){
+    renderStudentEntry(); return;
+  }
+  setMode("student");
+  ui.mainTitle.textContent = SESSION.student.pack.className || "Class";
+  ui.mainSub.textContent = SESSION.student.pack.displayName + " — 自分の受講状況を管理";
+  ui.tabs.style.display="flex";
+
+  const tabs = [
+    {id:"my", label:"講座"},
+    {id:"log", label:"ログ"},
+    {id:"export", label:"提出"},
+    {id:"settings", label:"設定"},
+  ];
+  ui.tabs.innerHTML="";
+  for(const t of tabs){
+    ui.tabs.appendChild(h("button",{class:"tab"+(SESSION.ui.tab===t.id?" active":""), onClick: ()=>{
+      SESSION.ui.tab = t.id; saveUIState(); renderStudentApp();
+    }}, t.label));
+  }
+
+  const tab = SESSION.ui.tab || "my";
+  if(tab==="log") return renderStudentLogs();
+  if(tab==="export") return renderStudentExport();
+  if(tab==="settings") return renderStudentSettings();
+  return renderStudentCourses();
+}
+
+function renderStudentCourses(){
+  const pack = SESSION.student.pack;
+  const record = SESSION.student.record;
+
+  const stats = computeStudentStats(record, pack.coursesPublic);
+
+  const kpi = h("div",{class:"kpi"},
+    h("div",{class:"box"}, h("div",{class:"num"}, `${stats.doneUnits}/${stats.totalUnits||0}`), h("div",{class:"lab"},"完了ユニット")),
+    h("div",{class:"box"}, h("div",{class:"num"}, `${stats.watchedMin}`), h("div",{class:"lab"},"総視聴（分）")),
+    h("div",{class:"box"}, h("div",{class:"num"}, `${record.goals.weeklyMin}`), h("div",{class:"lab"},"週目標（分）")),
+  );
+
+  const list = h("div",{class:"list"});
+  for(const c of pack.coursesPublic){
+    const unitList = h("div",{class:"list"});
+    for(const u of c.units){
+      const us = studentUnitStatus(c.courseId, u.unitId);
+      const chk = h("input",{type:"checkbox"});
+      chk.checked = !!us.done;
+      chk.addEventListener("change", ()=>studentToggleDone(c.courseId, u.unitId, chk.checked).then(()=>{ toast("更新しました"); renderStudentApp(); }));
+
+      const addBtn = h("button",{class:"btn small", onClick: ()=>openStudentAddWatch(c.courseId, u.unitId)}, "＋視聴");
+      const openBtn = u.url ? h("button",{class:"btn small ghost", onClick: ()=>window.open(u.url, "_blank")}, "開く") : null;
+
+      unitList.appendChild(h("div",{class:"item"},
+        h("div",{class:"meta"},
+          h("div",{class:"h"}, u.title),
+          h("div",{class:"m"}, `推定: ${u.estMin||0}分 • 視聴: ${us.watchedMin||0}分`)
+        ),
+        h("div",{class:"row"},
+          h("span",{class:"badge"}, chk.checked ? "完了" : "未完"),
+          chk,
+          addBtn,
+          openBtn
+        )
+      ));
+    }
+
+    list.appendChild(h("div",{class:"card"},
+      h("div",{class:"hd"},
+        h("div",{},
+          h("div",{class:"title"}, `${c.subject} / ${c.title}`),
+          h("div",{class:"sub"}, `ユニット: ${c.units.length}`)
+        ),
+        h("span",{class:"badge"}, "course")
+      ),
+      h("div",{class:"bd"}, unitList)
+    ));
+  }
+
+  ui.main.innerHTML="";
+  ui.main.appendChild(h("div",{class:"stack"},
+    kpi,
+    h("div",{class:"hint"}, "各ユニットの「＋視聴」で視聴分を記録できます。最後に「提出」から更新ファイルを出して講師へ送ってください。"),
+    list
+  ));
+}
+
+function openStudentAddWatch(courseId, unitId){
+  const minutes = h("input",{class:"input", type:"number", min:"0", step:"5", value:"30"});
+  const memo = h("input",{class:"input", placeholder:"メモ（任意）"});
+  const body = h("div",{class:"stack"},
+    field("追加視聴（分）", minutes),
+    field("メモ", memo),
+    h("div",{class:"row"},
+      h("button",{class:"btn", onClick: closeModal}, "キャンセル"),
+      h("button",{class:"btn primary", onClick: async ()=>{
+        try{
+          const m = clamp(parseInt(minutes.value||"0",10)||0, 0, 10000);
+          await studentAddWatch(courseId, unitId, m, memo.value);
+          closeModal();
+          toast("記録しました");
+          renderStudentApp();
+        }catch(e){ toast("失敗: "+e.message); }
+      }}, "追加")
+    )
+  );
+  showModal("視聴を記録", body);
+}
+
+function renderStudentLogs(){
+  const pack = SESSION.student.pack;
+  const record = SESSION.student.record;
+  const list = h("div",{class:"list"});
+  for(const L of record.logs.slice(0, 60)){
+    const c = pack.coursesPublic.find(x=>x.courseId===L.courseId);
+    const u = c?.units?.find(x=>x.unitId===L.unitId);
+    list.appendChild(h("div",{class:"item"},
+      h("div",{class:"meta"},
+        h("div",{class:"h"}, `${L.watchedMin}分  ${c?.title||"—"} / ${u?.title||"—"}`),
+        h("div",{class:"m"}, `${new Date(L.at).toLocaleString()}  ${L.memo?("• "+L.memo):""}`)
+      ),
+      h("span",{class:"badge"}, "log")
+    ));
+  }
+
+  const clear = h("button",{class:"btn danger", onClick: async ()=>{
+    const ok = await confirmDialog("ログ削除", "ログを全削除しますか？（復元不可）");
+    if(!ok) return;
+    record.logs = [];
+    await studentPersist();
+    toast("削除しました");
+    renderStudentApp();
+  }}, "ログを全削除");
+
+  ui.main.innerHTML="";
+  ui.main.appendChild(h("div",{class:"stack"},
+    h("div",{class:"row"}, clear),
+    list
+  ));
+}
+
+function renderStudentExport(){
+  const exportBtn = h("button",{class:"btn primary wide", onClick: async ()=>{
+    try{
+      await studentPersist();
+      await studentExportUpdate();
+    }catch(e){ toast("失敗: "+e.message); }
+  }}, "更新ファイルを作成してダウンロード");
+
+  const hint = h("div",{class:"item"},
+    h("div",{class:"meta"},
+      h("div",{class:"h"}, "提出フロー"),
+      h("div",{class:"m"}, "1) この画面で更新ファイルを作成\n2) 先生へ送付（LINE/メール/AirDrop等）\n3) 先生が取り込み"
+      )
+    ),
+    h("span",{class:"badge ok"}, "安全")
+  );
+
+  ui.main.innerHTML="";
+  ui.main.appendChild(h("div",{class:"stack"},
+    exportBtn,
+    hint
+  ));
+}
+
+function renderStudentSettings(){
+  const weekly = h("input",{class:"input", type:"number", min:"0", step:"10", value:String(SESSION.student.record.goals.weeklyMin||120)});
+  const save = h("button",{class:"btn primary", onClick: async ()=>{
+    SESSION.student.record.goals.weeklyMin = clamp(parseInt(weekly.value||"0",10)||0, 0, 99999);
+    await studentPersist();
+    toast("保存しました");
+    renderStudentApp();
+  }}, "保存");
+
+  const reimport = h("button",{class:"btn", onClick: async ()=>{
+    const ok = await confirmDialog("再取り込み", "招待ファイルを再取り込みします。現在の端末データは上書きされます。よろしいですか？");
+    if(!ok) return;
+    try{
+      const f = await pickFile(".json"); if(!f) return;
+      const obj = await readJSONFile(f);
+      await studentImportInvite(obj);
+      lockAll();
+      renderStudentEntry();
+      toast("取り込みました。パスフレーズで解除してください。");
+    }catch(e){ toast("失敗: "+e.message); }
+  }}, "招待ファイルを再取り込み");
+
+  ui.main.innerHTML="";
+  ui.main.appendChild(h("div",{class:"stack"},
+    field("週の目標（分）", weekly),
+    h("div",{class:"row"}, save),
+    h("div",{class:"hr"}),
+    reimport,
+    h("div",{class:"hint"}, "※ 生徒パスフレーズ変更機能は v1 では未実装です。必要な場合は講師に「パス再発行」を依頼してください。")
+  ));
+}
+
+// ---------- Search shortcut (Ctrl/⌘+K) ----------
+window.addEventListener("keydown", (e)=>{
+  const isMac = navigator.platform.toLowerCase().includes("mac");
+  const mod = isMac ? e.metaKey : e.ctrlKey;
+  if(mod && e.key.toLowerCase()==="k"){
+    e.preventDefault();
+    if(SESSION.mode==="teacher" && SESSION.teacher.unlocked){
+      const q = prompt("生徒検索（表示名/ID）","");
+      if(!q) return;
+      const st = SESSION.teacher.vault.students.find(s=>(s.studentId+s.displayName).toLowerCase().includes(q.toLowerCase()));
+      if(st) openTeacherStudentDetail(st.studentId);
+      else toast("見つかりませんでした");
+    }else{
+      toast("ログイン後に使えます");
+    }
+  }
+});
+
+// ---------- Service Worker ----------
+if("serviceWorker" in navigator){
+  window.addEventListener("load", async ()=>{
+    try{
+      await navigator.serviceWorker.register("./sw.js", {scope:"./"});
+    }catch(e){
+      console.warn("SW register failed", e);
+    }
+  });
+}
+
+loadUIState();
+renderHome();
+</script>
+</body>
+</html>
